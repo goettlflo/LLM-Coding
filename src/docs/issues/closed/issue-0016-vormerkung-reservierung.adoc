@@ -1,7 +1,7 @@
 = Issue 0016: Vormerkung & Reservierung
 :issue-id: 0016
 :type: EPIC
-:status: open
+:status: closed
 :priority: Must
 :refs: UC-07
 
