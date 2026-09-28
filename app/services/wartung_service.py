@@ -31,3 +31,20 @@ class WartungService:
 
         self._gegenstand_repository.nutzungszaehler_zuruecksetzen(gegenstand.id)  # BR-WA-03
         return self._gegenstand_repository.finden(gegenstand.id)
+
+    def ausmustern(self, gegenstand_id: str, rolle: str = "wart") -> Gegenstand:
+        if rolle != "wart":
+            raise ValidationError("Nur der Wart mustert Gegenstände aus", code="FORBIDDEN")
+
+        gegenstand = self._gegenstand_repository.finden(gegenstand_id)
+        if gegenstand is None:
+            raise NotFoundError(f"Gegenstand {gegenstand_id} nicht gefunden")
+
+        # BR-VM-07: Vormerkungs-Warteschlange bleibt unangetastet
+        erfolgreich = self._gegenstand_repository.zustand_setzen(
+            gegenstand.id, "ausgemustert", gegenstand.version
+        )
+        if not erfolgreich:
+            raise ConflictError("Gegenstand wurde inzwischen anderweitig verändert")
+
+        return self._gegenstand_repository.finden(gegenstand.id)

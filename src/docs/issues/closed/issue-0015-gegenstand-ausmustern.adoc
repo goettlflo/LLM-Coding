@@ -1,0 +1,34 @@
+= Issue 0015: Gegenstand ausmustern
+:issue-id: 0015
+:type: Story
+:status: closed
+:priority: Must
+:refs: UC-06, BR-VM-07, SUC-09
+
+== Beschreibung
+
+WartungService.ausmustern(): setzt einen Gegenstand endgültig auf "ausgemustert". Eine bestehende Vormerkungs-Warteschlange der Kategorie bleibt dabei unverändert erhalten (BR-VM-07).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-VM-07
+Szenario: Letzter Gegenstand einer Kategorie wird ausgemustert
+  Angenommen eine Kategorie hat genau einen Gegenstand
+  Und für diese Kategorie liegen zwei Vormerkungen in der Warteschlange vor
+  Wenn der Wart diesen Gegenstand nach der Prüfung ausmustert
+  Dann bleibt die Warteschlange mit beiden Vormerkungen unverändert bestehen
+  Und es entsteht keine Reservierung
+----
+
+== Abhängigkeiten
+
+- 0003 (Gegenstand/Kategorie anlegen und abfragen)
+
+== Analyse
+
+* `WartungService.ausmustern(gegenstand_id, rolle="wart")` (gleicher Service wie Issue 0014): `rolle == "wart"` erforderlich (sonst `ValidationError`), unbekannte ID -> `NotFoundError`. Keine Zustands-Vorbedingung (SUC-09 verlangt nur die Rollenprüfung) — Übergang ist von jedem Zustand aus erlaubt außer bereits `ausgemustert` (dann No-Op/`ConflictError`? Spec verlangt das nicht explizit; einfachster Ansatz: `zustand_wechseln_atomar` mit `erwarteter_zustand = aktueller Zustand` direkt aus dem gelesenen Gegenstand, damit optimistisches Locking greift, kein hartkodierter Ausgangszustand nötig — dafür neue Repository-Methode ohne erwarteten Zustand: `GegenstandRepository.zustand_setzen(gegenstand_id, "ausgemustert", version)`).
+* BR-VM-07: Die Vormerkungs-Warteschlange (Tabelle `vormerkung`) wird nicht angefasst — schlicht keine Methode aufrufen, die sie verändert. Test belegt das explizit (Warteschlange bleibt bestehen, keine Reservierung entsteht).
+* CLI-Befehl `leihgut ausmustern --gegenstand <id> --rolle wart` (SUC-09), Exit-Codes 0/1/2 wie spezifiziert.
+* Tests: Erweiterung von `tests/test_wartung_service.py` + CLI-Test; TDD-Referenz BR-VM-07.

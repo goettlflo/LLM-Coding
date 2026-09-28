@@ -3,6 +3,8 @@ Issue 0015 (Gegenstand ausmustern): BR-VM-07.
 """
 from __future__ import annotations
 
+import sqlite3
+
 import pytest
 
 from app.container import Anwendungskontext
@@ -68,3 +70,37 @@ def test_wartung_abschliessen_unbekannter_gegenstand_wird_abgelehnt(
 ) -> None:
     with pytest.raises(NotFoundError):
         kontext.wartung_service.wartung_abschliessen("unbekannt")
+
+
+def test_ausmustern_laesst_vormerkungs_warteschlange_unveraendert_br_vm_07(
+    kontext: Anwendungskontext, conn: sqlite3.Connection
+) -> None:
+    kategorie = _kategorie(kontext)
+    gegenstand = _gegenstand(kontext, kategorie.id)
+    mitglied_a = _mitglied(kontext, "Karim")
+    mitglied_b = _mitglied(kontext, "Nora")
+    kontext.vormerkung_repository.anlegen(kategorie.id, mitglied_a.id, "2024-01-01T10:00:00")
+    kontext.vormerkung_repository.anlegen(kategorie.id, mitglied_b.id, "2024-01-02T10:00:00")
+
+    ergebnis = kontext.wartung_service.ausmustern(gegenstand.id)
+
+    assert ergebnis.zustand == "ausgemustert"
+    vormerkungen = conn.execute(
+        "SELECT id FROM vormerkung WHERE kategorie_id = ?", (kategorie.id,)
+    ).fetchall()
+    assert len(vormerkungen) == 2
+    ausleihen = conn.execute("SELECT id FROM ausleihe").fetchall()
+    assert len(ausleihen) == 0
+
+
+def test_ausmustern_durch_falsche_rolle_wird_abgelehnt(kontext: Anwendungskontext) -> None:
+    kategorie = _kategorie(kontext)
+    gegenstand = _gegenstand(kontext, kategorie.id)
+
+    with pytest.raises(ValidationError):
+        kontext.wartung_service.ausmustern(gegenstand.id, rolle="thekendienst")
+
+
+def test_ausmustern_unbekannter_gegenstand_wird_abgelehnt(kontext: Anwendungskontext) -> None:
+    with pytest.raises(NotFoundError):
+        kontext.wartung_service.ausmustern("unbekannt")

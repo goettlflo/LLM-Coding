@@ -97,6 +97,18 @@ class GegenstandRepository:
         self._conn.commit()
         return cursor.rowcount == 1
 
+    def zustand_setzen(
+        self, gegenstand_id: str, neuer_zustand: str, erwarteter_version: int
+    ) -> bool:
+        """BR-VM-07: Zustandswechsel ohne Vorbedingung an den Ausgangszustand (z. B. Ausmusterung)."""
+        cursor = self._conn.execute(
+            "UPDATE gegenstand SET zustand = ?, version = version + 1 "
+            "WHERE id = ? AND version = ?",
+            (neuer_zustand, gegenstand_id, erwarteter_version),
+        )
+        self._conn.commit()
+        return cursor.rowcount == 1
+
 def _to_gegenstand(row: sqlite3.Row) -> Gegenstand:
     return Gegenstand(
         id=row["id"],

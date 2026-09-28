@@ -80,5 +80,24 @@ def wartung_abschliessen(
     )
 
 
+@app.command("ausmustern")
+def ausmustern(
+    gegenstand: str = typer.Option(..., "--gegenstand"),
+    rolle: str = typer.Option(..., "--rolle"),
+) -> None:
+    """Mustert einen Gegenstand endgültig aus, Vormerkungen bleiben unangetastet (SUC-09)."""
+    kontext = _kontext()
+    try:
+        gegenstand_nachher = kontext.wartung_service.ausmustern(gegenstand, rolle=rolle)
+    except NotFoundError as fehler:
+        typer.echo(str(fehler), err=True)
+        raise typer.Exit(code=2)
+    except DomainError as fehler:
+        typer.echo(str(fehler), err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"Zustand: {gegenstand_nachher.zustand}")
+
+
 if __name__ == "__main__":
     app()
