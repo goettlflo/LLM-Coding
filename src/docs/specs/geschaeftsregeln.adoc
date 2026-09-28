@@ -17,6 +17,7 @@ Die fachliche Formulierung bleibt im PRD; hier folgt die Zerlegung und Zuordnung
 |BR-KAT-02 |Die Kategorie bestimmt Leihdauer (Tage), Wartungsintervall (Ausleihen) und Einweisungspflicht.
 |BR-KAT-03 |Jeder Gegenstand hat einen Wiederbeschaffungswert in Euro.
 |BR-KAT-04 |Die Kaution beträgt 20 % des Wiederbeschaffungswerts, kaufmännisch gerundet auf ganze Euro, mindestens 5 und höchstens 100 Euro.
+|BR-KAT-05 |Der Name einer Kategorie ist ein Pflichtfeld und darf nicht leer sein.
 |===
 
 [source,gherkin]
@@ -44,6 +45,7 @@ Szenario: Kautionsberechnung wird auf die Grenzwerte gedeckelt
 |BR-AUS-05 |Mit der Ausgabe wird die Kaution hinterlegt und die Rückgabefrist gesetzt: Ausgabedatum plus Leihdauer der Kategorie.
 |BR-AUS-06 |Eine Verlängerung um die volle Leihdauer ist einmal je Ausleihe möglich.
 |BR-AUS-07 |Eine Verlängerung ist ausgeschlossen, wenn für die Kategorie eine Vormerkung offen ist oder die Ausleihe bereits überfällig ist.
+|BR-AUS-08 |Eine Verlängerung darf nur vom Mitglied angefragt werden, dem die Ausleihe gehört, oder vom Thekendienst. Andernfalls wird die Verlängerung abgelehnt.
 |===
 
 [source,gherkin]
@@ -102,6 +104,39 @@ Szenario: Verlängerung einer überfälligen Ausleihe wird abgelehnt
   Angenommen eine Ausleihe ist bereits überfällig
   Wenn das Mitglied verlängern will
   Dann wird die Verlängerung abgelehnt
+
+# BR-AUS-08
+Szenario: Verlängerung durch ein fremdes Mitglied wird abgelehnt
+  Angenommen eine Ausleihe gehört Mitglied A
+  Wenn Mitglied B die Verlängerung dieser Ausleihe anfragt
+  Dann wird die Verlängerung abgelehnt
+
+Szenario: Thekendienst darf jede Ausleihe verlängern
+  Angenommen eine Ausleihe gehört Mitglied A
+  Wenn der Thekendienst die Verlängerung dieser Ausleihe anfragt
+  Dann wird die Verlängerung geprüft wie bei Mitglied A selbst
+----
+
+== Mitglied
+
+[cols="1,4"]
+|===
+|BR-MIT-01 |Der Name eines Mitglieds ist ein Pflichtfeld und darf nicht leer sein.
+|BR-MIT-02 |Eine Einweisung kann nur für eine existierende Kategorie erfasst werden.
+|===
+
+[source,gherkin]
+----
+# BR-MIT-01
+Szenario: Mitglied ohne Namen wird nicht angelegt
+  Wenn ein Mitglied mit leerem Namen angelegt werden soll
+  Dann wird die Anfrage abgelehnt
+
+# BR-MIT-02
+Szenario: Einweisung für unbekannte Kategorie wird abgelehnt
+  Angenommen eine kategorieId existiert nicht
+  Wenn für ein Mitglied eine Einweisung für diese kategorieId erfasst werden soll
+  Dann wird die Anfrage abgelehnt
 ----
 
 == Rückgabe und Prüfung

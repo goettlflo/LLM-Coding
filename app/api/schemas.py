@@ -60,6 +60,10 @@ class AusgabeRequest(BaseModel):
     mitgliedId: str
 
 
+class RuecknahmeRequest(BaseModel):
+    auffaelligkeit: str | None = None
+
+
 class AusleiheResponse(BaseModel):
     id: str
     gegenstandId: str

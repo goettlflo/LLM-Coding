@@ -19,6 +19,7 @@ from app.services.audit_service import AuditService
 from app.services.ausleihe_service import AusleiheService
 from app.services.katalog_service import KatalogService
 from app.services.mitglied_service import MitgliedService
+from app.services.rueckgabe_service import RueckgabeService
 
 
 @dataclass
@@ -35,6 +36,7 @@ class Anwendungskontext:
     mitglied_service: MitgliedService
     audit_service: AuditService
     ausleihe_service: AusleiheService
+    rueckgabe_service: RueckgabeService
 
 
 def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
@@ -60,6 +62,7 @@ def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
         mitglied_service=mitglied_service,
         audit_service=audit_service,
     )
+    rueckgabe_service = RueckgabeService(gegenstand_repository=gegenstand_repository)
 
     return Anwendungskontext(
         kategorie_repository=kategorie_repository,
@@ -74,4 +77,5 @@ def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
         mitglied_service=mitglied_service,
         audit_service=audit_service,
         ausleihe_service=ausleihe_service,
+        rueckgabe_service=rueckgabe_service,
     )

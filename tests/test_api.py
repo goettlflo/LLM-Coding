@@ -134,3 +134,48 @@ def test_suc_02_zweite_verlaengerung_409(client: TestClient) -> None:
 
     assert response.status_code == 409
     assert response.json()["code"] == "EXTENSION_NOT_ALLOWED"
+
+
+def test_suc_03_ruecknahme_erfolgreich(client: TestClient) -> None:
+    kategorie_id = _kategorie_anlegen(client)
+    gegenstand_id = _gegenstand_anlegen(client, kategorie_id)
+    mitglied_id = _mitglied_anlegen(client)
+    client.post(
+        f"/gegenstaende/{gegenstand_id}/ausgabe",
+        json={"mitgliedId": mitglied_id},
+        headers={"X-Rolle": "thekendienst"},
+    )
+
+    response = client.post(
+        f"/gegenstaende/{gegenstand_id}/ruecknahme",
+        json={"auffaelligkeit": "Riss im Stoff"},
+        headers={"X-Rolle": "thekendienst"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["zustand"] == "in_pruefung"
+
+
+def test_suc_03_unbekannter_gegenstand_404(client: TestClient) -> None:
+    response = client.post(
+        "/gegenstaende/unbekannt/ruecknahme",
+        json={},
+        headers={"X-Rolle": "thekendienst"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "NOT_FOUND"
+
+
+def test_suc_03_nicht_ausgeliehener_gegenstand_404(client: TestClient) -> None:
+    kategorie_id = _kategorie_anlegen(client)
+    gegenstand_id = _gegenstand_anlegen(client, kategorie_id)
+
+    response = client.post(
+        f"/gegenstaende/{gegenstand_id}/ruecknahme",
+        json={},
+        headers={"X-Rolle": "thekendienst"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "NOT_FOUND"

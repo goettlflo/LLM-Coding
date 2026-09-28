@@ -19,6 +19,7 @@ from app.api.schemas import (
     KategorieResponse,
     MitgliedAnlegenRequest,
     MitgliedResponse,
+    RuecknahmeRequest,
 )
 
 
@@ -146,6 +147,20 @@ def create_app(db_path: str) -> FastAPI:
     ):
         ausleihe = kontext.ausleihe_service.verlaengern(ausleihe_id)
         return _zu_ausleihe_response(ausleihe, kontext)
+
+    @app.post(
+        "/gegenstaende/{gegenstand_id}/ruecknahme",
+        response_model=GegenstandResponse,
+        status_code=200,
+        dependencies=[Depends(rolle_pruefen({"thekendienst"}))],
+    )
+    def gegenstand_zuruecknehmen(
+        gegenstand_id: str,
+        body: RuecknahmeRequest,
+        kontext: Anwendungskontext = Depends(hole_kontext),
+    ):
+        gegenstand = kontext.rueckgabe_service.zuruecknehmen(gegenstand_id, body.auffaelligkeit)
+        return _zu_gegenstand_response(gegenstand)
 
     return app
 

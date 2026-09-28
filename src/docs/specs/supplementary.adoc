@@ -189,12 +189,17 @@ verfallen --> [*]
 |Gegenstand.kategorieId |Muss existierende Kategorie referenzieren |BR-KAT-01
 |Gegenstand.wiederbeschaffungswert |> 0 Euro |BR-KAT-03
 |Kaution.betrag |= round(0.2 × Wiederbeschaffungswert), gedeckelt auf [5, 100] Euro |BR-KAT-04
+|Kategorie.name |Pflichtfeld, nicht leer |BR-KAT-05
 |Ausleihe (Ausgabe) |Gegenstand.zustand ∈ \{verfuegbar, reserviert-für-dieses-Mitglied\} |BR-AUS-01
+|Ausleihe (Ausgabe).mitgliedId |Pflichtfeld, nicht leer, muss existierendes Mitglied referenzieren |BR-AUS-01
 |Ausleihe (Ausgabe) |Anzahl aktiver Ausleihen des Mitglieds < 3 |BR-AUS-02
 |Ausleihe (Ausgabe) |Mitglied.gesperrt = false |BR-AUS-03
 |Ausleihe (Ausgabe) |Wenn Kategorie.einweisungspflichtig: Einweisung für (Mitglied, Kategorie) muss existieren |BR-AUS-04
 |Ausleihe (Verlängerung) |verlaengert = false |BR-AUS-06
 |Ausleihe (Verlängerung) |keine offene Vormerkung der Kategorie und nicht überfällig |BR-AUS-07
+|Ausleihe (Verlängerung), Rolle mitglied |X-Mitglied-Id muss ausleihe.mitgliedId entsprechen |BR-AUS-08
+|Mitglied.name |Pflichtfeld, nicht leer |BR-MIT-01
+|Einweisung.kategorieId |Muss existierende Kategorie referenzieren |BR-MIT-02
 |Prüfprotokoll.abzug |≤ Kaution.betrag |BR-KAU-02
 |Vormerkung |kategorieId und mitgliedId müssen existieren |BR-VM-01
 |Reservierung.verfallszeit |= nächster Öffnungstag nach Entstehung + 3 Kalendertage |BR-VM-04

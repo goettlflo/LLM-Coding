@@ -1,0 +1,38 @@
+= Issue 0025: Bug — mitgliedId akzeptiert leeren String bei Ausgabe
+:issue-id: 0025
+:type: Bug
+:status: open
+:priority: Should
+:refs: SUC-01, BR-AUS-01
+
+== Beschreibung
+
+Gefunden bei manuellen Tests der Ausleihen-API am 2026-09-28.
+
+`POST /gegenstaende/{id}/ausgabe` akzeptiert einen leeren String als `mitgliedId`:
+
+[source,json]
+----
+POST /gegenstaende/{id}/ausgabe
+X-Rolle: thekendienst
+{ "mitgliedId": "" }
+----
+
+Tatsächlich: `404 NOT_FOUND` mit Meldung `"Mitglied  nicht gefunden"` (doppeltes Leerzeichen).
+
+Erwartet: `422 VALIDATION_ERROR` mit klarer Meldung, dass `mitgliedId` nicht leer sein darf — Validierung sollte an der REST-Grenze erfolgen (ADR-0001).
+
+Ursache: `AusgabeRequest` (app/api/schemas.py) definiert `mitgliedId: str` ohne `min_length=1`.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given ein verfügbarer Gegenstand
+When POST /gegenstaende/{id}/ausgabe mit mitgliedId: "" aufgerufen wird
+Then antwortet das System mit 422 VALIDATION_ERROR statt 404
+----
+
+== Abhängigkeiten
+
+- 0007 (Ausgabe eines Gegenstands)

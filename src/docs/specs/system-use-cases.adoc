@@ -41,8 +41,8 @@ Jede System-Use-Case-ID (SUC-ID) referenziert die Persona-Use-Case-ID (UC-ID) au
 
 [cols="1,4"]
 |===
-|Input |kein Body, Header `X-Rolle: thekendienst` oder `mitglied`
-|Validierung |`id` bezeichnet eine aktive Ausleihe.
+|Input |kein Body, Header `X-Rolle: thekendienst` oder `mitglied`; bei Rolle `mitglied` zusätzlich Header `X-Mitglied-Id: string`
+|Validierung |`id` bezeichnet eine aktive Ausleihe. Bei Rolle `mitglied` muss `X-Mitglied-Id` mit `ausleihe.mitgliedId` übereinstimmen (BR-AUS-08).
 |===
 
 [cols="1,1,3"]
@@ -51,10 +51,15 @@ Jede System-Use-Case-ID (SUC-ID) referenziert die Persona-Use-Case-ID (UC-ID) au
 
 |200 |Verlängerung erfolgreich |Ausleihe-Ressource mit neuer Rückgabefrist
 |404 |`id` unbekannt |Fehlercode `NOT_FOUND`
+|403 |Rolle `mitglied` und `X-Mitglied-Id` ≠ `ausleihe.mitgliedId` (BR-AUS-08) |Fehlercode `FORBIDDEN`
 |409 |BR-AUS-06 (bereits verlängert), BR-AUS-07 (Vormerkung/überfällig) |Fehlercode `EXTENSION_NOT_ALLOWED`
 |===
 
-*EARS*: While eine Ausleihe noch nicht verlängert wurde und weder überfällig ist noch eine Vormerkung ihrer Kategorie vorliegt, shall das System eine Verlängerungsanfrage mit Status 200 gewähren.
+*EARS*:
+* While eine Ausleihe noch nicht verlängert wurde und weder überfällig ist noch eine Vormerkung ihrer Kategorie vorliegt, shall das System eine Verlängerungsanfrage mit Status 200 gewähren.
+* If die Rolle `mitglied` eine Verlängerung für eine Ausleihe anfragt, die einem anderen Mitglied gehört, shall das System die Anfrage mit Status 403 ablehnen (BR-AUS-08).
+
+NOTE: Wie schon bei `X-Rolle` (PRD "Authentifizierung") wird auch `X-Mitglied-Id` unauthentifiziert entgegengenommen — die Prüfung schließt nur die Lücke aus Risiko R-01, dass ohne jede Objektzuordnung *jede* fremde Ausleihe verlängerbar wäre, ersetzt aber keine echte Authentifizierung.
 
 === SUC-03: `POST /gegenstaende/{id}/ruecknahme` (→ UC-03)
 
@@ -107,6 +112,26 @@ Jede System-Use-Case-ID (SUC-ID) referenziert die Persona-Use-Case-ID (UC-ID) au
 |===
 
 *Qualitätsziel*: Antwort unter 300 ms (95. Perzentil, 100 Aufrufe) bei 400 Gegenständen/800 Mitgliedern, siehe PRD "Qualitätsziele".
+
+=== SUC-06: `POST /mitglieder/{id}/einweisungen` (→ UC-01, Vorbedingung von BR-AUS-04)
+
+[cols="1,4"]
+|===
+|Input |`{ "kategorieId": string }`
+|Validierung |`id` (Mitglied) existiert, `kategorieId` existiert (BR-MIT-02).
+|===
+
+*Verarbeitung*: Legt eine Einweisung mit dem heutigen Datum für (Mitglied, Kategorie) an.
+
+[cols="1,1,3"]
+|===
+|Status |Bedingung |Body
+
+|201 |Einweisung erfolgreich angelegt |Einweisung-Ressource
+|404 |Mitglied `id` oder `kategorieId` unbekannt |Fehlercode `NOT_FOUND`
+|===
+
+*EARS*: When ein Einweisung-Request mit existierendem Mitglied und existierender Kategorie eintrifft, shall das System die Einweisung anlegen und mit Status 201 bestätigen.
 
 === SUC-06: `POST /kategorien/{id}/vormerkungen` (→ UC-07)
 

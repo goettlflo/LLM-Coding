@@ -1,0 +1,46 @@
+= Issue 0023: Bug — 500 Internal Server Error bei Einweisung mit unbekannter kategorieId
+:issue-id: 0023
+:type: Bug
+:status: open
+:priority: Must
+:refs: SUC-06, BR-MIT-02
+
+== Beschreibung
+
+Gefunden bei manuellen Tests der Ausleihen-API (`POST /gegenstaende/{id}/ausgabe`, `POST /ausleihen/{id}/verlaengerung`) am 2026-09-28.
+
+`POST /mitglieder/{mitglied_id}/einweisungen` mit einer nicht existierenden `kategorieId` liefert `500 Internal Server Error` statt eines strukturierten Fehlers.
+
+Request:
+[source,json]
+----
+POST /mitglieder/{mitglied_id}/einweisungen
+{ "kategorieId": "nicht-existent" }
+----
+
+Ursache: `MitgliedService.einweisung_erfassen` (app/services/mitglied_service.py) prüft nur die Existenz des Mitglieds, nicht der Kategorie. Das `INSERT` in `EinweisungRepository.anlegen` verletzt den FOREIGN-KEY-Constraint auf `einweisung.kategorie_id`; `sqlite3.IntegrityError` wird von keinem Exception-Handler in `app/api/app.py` abgefangen.
+
+Stacktrace (Auszug):
+----
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+  File "app/repositories/einweisung_repository.py", line 16, in anlegen
+  File "app/services/mitglied_service.py", line 33, in einweisung_erfassen
+  File "app/api/app.py", line 117, in einweisung_anlegen
+----
+
+Fix-Vorschlag: In `einweisung_erfassen` zusätzlich `KategorieRepository.finden(kategorie_id)` prüfen und bei Fehlen `NotFoundError` werfen (Muster wie in `KatalogService.gegenstand_anlegen`).
+
+Spec-Nachtrag (2026-09-28): SUC-06 in system-use-cases.adoc und BR-MIT-02 in geschaeftsregeln.adoc ergänzt — der Endpunkt hatte zuvor keinen System-Use-Case und keine Validierungsregel für `kategorieId`.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given ein existierendes Mitglied und eine unbekannte kategorieId
+When POST /mitglieder/{id}/einweisungen aufgerufen wird
+Then antwortet das System mit 404 NOT_FOUND statt 500
+----
+
+== Abhängigkeiten
+
+- 0004 (Mitglied/Einweisung)
