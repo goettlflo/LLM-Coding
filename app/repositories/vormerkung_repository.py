@@ -7,22 +7,40 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
+from app.models import Vormerkung
+
 
 class VormerkungRepository:
     def __init__(self, conn: sqlite3.Connection) -> None:
         self._conn = conn
 
-    def anlegen(self, kategorie_id: str, mitglied_id: str, eingangszeit: str) -> str:
+    def anlegen(self, kategorie_id: str, mitglied_id: str, eingangszeit: str) -> Vormerkung:
         vormerkung_id = uuid.uuid4().hex
         self._conn.execute(
             "INSERT INTO vormerkung (id, kategorie_id, mitglied_id, eingangszeit) VALUES (?, ?, ?, ?)",
             (vormerkung_id, kategorie_id, mitglied_id, eingangszeit),
         )
         self._conn.commit()
-        return vormerkung_id
+        return Vormerkung(
+            id=vormerkung_id, kategorie_id=kategorie_id, mitglied_id=mitglied_id, eingangszeit=eingangszeit
+        )
 
     def hat_offene_vormerkung(self, kategorie_id: str) -> bool:
         row = self._conn.execute(
             "SELECT 1 FROM vormerkung WHERE kategorie_id = ?", (kategorie_id,)
         ).fetchone()
         return row is not None
+
+    def warteschlange(self, kategorie_id: str) -> list[Vormerkung]:  # BR-VM-02
+        rows = self._conn.execute(
+            "SELECT * FROM vormerkung WHERE kategorie_id = ? ORDER BY eingangszeit", (kategorie_id,)
+        ).fetchall()
+        return [
+            Vormerkung(
+                id=row["id"],
+                kategorie_id=row["kategorie_id"],
+                mitglied_id=row["mitglied_id"],
+                eingangszeit=row["eingangszeit"],
+            )
+            for row in rows
+        ]

@@ -71,3 +71,11 @@ class Pruefprotokoll:
     abzug: int
     schaden_vermerkt: bool
     erstellt_am: str
+
+
+@dataclass(frozen=True)
+class Vormerkung:
+    id: str
+    kategorie_id: str
+    mitglied_id: str
+    eingangszeit: str

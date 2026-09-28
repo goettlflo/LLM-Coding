@@ -20,6 +20,8 @@ from app.api.schemas import (
     MitgliedAnlegenRequest,
     MitgliedResponse,
     RuecknahmeRequest,
+    VormerkungAnlegenRequest,
+    VormerkungResponse,
 )
 
 
@@ -161,6 +163,25 @@ def create_app(db_path: str) -> FastAPI:
     ):
         gegenstand = kontext.rueckgabe_service.zuruecknehmen(gegenstand_id, body.auffaelligkeit)
         return _zu_gegenstand_response(gegenstand)
+
+    @app.post(
+        "/kategorien/{kategorie_id}/vormerkungen",
+        response_model=VormerkungResponse,
+        status_code=201,
+        dependencies=[Depends(rolle_pruefen({"mitglied", "thekendienst"}))],
+    )
+    def vormerkung_anlegen(
+        kategorie_id: str,
+        body: VormerkungAnlegenRequest,
+        kontext: Anwendungskontext = Depends(hole_kontext),
+    ):
+        vormerkung, position = kontext.vormerkung_service.vormerken(kategorie_id, body.mitgliedId)
+        return VormerkungResponse(
+            id=vormerkung.id,
+            kategorieId=vormerkung.kategorie_id,
+            mitgliedId=vormerkung.mitglied_id,
+            position=position,
+        )
 
     return app
 

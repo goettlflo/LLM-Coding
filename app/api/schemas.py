@@ -77,3 +77,14 @@ class AusleiheResponse(BaseModel):
 class FehlerResponse(BaseModel):
     code: str
     message: str
+
+
+class VormerkungAnlegenRequest(BaseModel):
+    mitgliedId: str
+
+
+class VormerkungResponse(BaseModel):
+    id: str
+    kategorieId: str
+    mitgliedId: str
+    position: int

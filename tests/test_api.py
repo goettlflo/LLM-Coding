@@ -179,3 +179,25 @@ def test_suc_03_nicht_ausgeliehener_gegenstand_404(client: TestClient) -> None:
 
     assert response.status_code == 404
     assert response.json()["code"] == "NOT_FOUND"
+
+
+def test_suc_06_vormerkung_anlegen_liefert_position_br_vm_01_02(client: TestClient) -> None:
+    kategorie_id = _kategorie_anlegen(client)
+    erstes_mitglied_id = _mitglied_anlegen(client, "Karim")
+    zweites_mitglied_id = _mitglied_anlegen(client, "Lena")
+    client.post(
+        f"/kategorien/{kategorie_id}/vormerkungen",
+        json={"mitgliedId": erstes_mitglied_id},
+        headers={"X-Rolle": "mitglied"},
+    )
+
+    response = client.post(
+        f"/kategorien/{kategorie_id}/vormerkungen",
+        json={"mitgliedId": zweites_mitglied_id},
+        headers={"X-Rolle": "mitglied"},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["position"] == 2
+    assert response.json()["kategorieId"] == kategorie_id
+    assert response.json()["mitgliedId"] == zweites_mitglied_id
