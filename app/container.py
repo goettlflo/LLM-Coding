@@ -71,6 +71,7 @@ def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
         kaution_repository=kaution_repository,
         pruefprotokoll_repository=pruefprotokoll_repository,
         audit_service=audit_service,
+        kategorie_repository=kategorie_repository,
     )
 
     return Anwendungskontext(

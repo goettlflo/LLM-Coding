@@ -1,5 +1,6 @@
 """Issue 0010 (Gegenstand zurücknehmen): BR-RP-01, BR-RP-02.
 Issue 0011 (Prüfprotokoll abschließen): BR-RP-03..05, BR-KAU-01..04.
+Issue 0012 (Nutzungszähler und Wartungsfälligkeit): BR-WA-01, BR-WA-02.
 """
 from __future__ import annotations
 
@@ -165,3 +166,41 @@ def test_bereits_vermerkter_schaden_wird_nicht_erneut_zugerechnet_br_rp_05(
     assert protokoll.schaden_vermerkt is False
     kaution_zweite = kontext.kaution_repository.finden_fuer_ausleihe(zweite_ausleihe.id)
     assert kaution_zweite.status == "freigegeben"
+
+
+def _voller_zyklus(kontext: Anwendungskontext, gegenstand_id: str, mitglied_id: str, ergebnis: str):
+    kontext.ausleihe_service.ausgeben(gegenstand_id, mitglied_id)
+    kontext.rueckgabe_service.zuruecknehmen(gegenstand_id)
+    return kontext.rueckgabe_service.pruefung_abschliessen(gegenstand_id, ergebnis)
+
+
+def test_nutzungszaehler_erhoeht_sich_um_eins_je_unauffaelligem_zyklus_br_wa_01(
+    kontext: Anwendungskontext,
+) -> None:
+    kategorie = _kategorie(kontext)
+    gegenstand = _gegenstand(kontext, kategorie.id)
+    mitglied = _mitglied(kontext)
+
+    _voller_zyklus(kontext, gegenstand.id, mitglied.id, "unauffaellig")
+    gegenstand_nachher = kontext.gegenstand_repository.finden(gegenstand.id)
+
+    assert gegenstand_nachher.nutzungszaehler == 1
+
+
+def test_nutzungszaehler_erreicht_wartungsintervall_setzt_wartungsfaellig_br_wa_02(
+    kontext: Anwendungskontext,
+) -> None:
+    kategorie = kontext.katalog_service.kategorie_anlegen("Zelt", 14, 5, False)
+    gegenstand = _gegenstand(kontext, kategorie.id)
+    mitglied = _mitglied(kontext)
+
+    for _ in range(4):
+        _voller_zyklus(kontext, gegenstand.id, mitglied.id, "unauffaellig")
+    gegenstand_vor_fuenftem_zyklus = kontext.gegenstand_repository.finden(gegenstand.id)
+    assert gegenstand_vor_fuenftem_zyklus.nutzungszaehler == 4
+
+    _voller_zyklus(kontext, gegenstand.id, mitglied.id, "unauffaellig")
+    gegenstand_nachher = kontext.gegenstand_repository.finden(gegenstand.id)
+
+    assert gegenstand_nachher.nutzungszaehler == 5
+    assert gegenstand_nachher.zustand == "wartungsfaellig"

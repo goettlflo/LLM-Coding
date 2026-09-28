@@ -66,6 +66,18 @@ class GegenstandRepository:
         self._conn.commit()
         return cursor.rowcount == 1
 
+    def nutzungszaehler_erhoehen(self, gegenstand_id: str) -> int:
+        """BR-WA-01: erhöht den Nutzungszähler um 1 und gibt den neuen Wert zurück."""
+        self._conn.execute(
+            "UPDATE gegenstand SET nutzungszaehler = nutzungszaehler + 1 WHERE id = ?",
+            (gegenstand_id,),
+        )
+        self._conn.commit()
+        row = self._conn.execute(
+            "SELECT nutzungszaehler FROM gegenstand WHERE id = ?", (gegenstand_id,)
+        ).fetchone()
+        return row["nutzungszaehler"]
+
 
 def _to_gegenstand(row: sqlite3.Row) -> Gegenstand:
     return Gegenstand(

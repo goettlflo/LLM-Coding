@@ -1,7 +1,7 @@
 = Issue 0012: Nutzungszähler und Wartungsfälligkeit
 :issue-id: 0012
 :type: Story
-:status: open
+:status: closed
 :priority: Must
 :refs: BR-WA-01, BR-WA-02
 

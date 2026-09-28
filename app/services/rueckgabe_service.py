@@ -1,6 +1,7 @@
 """RueckgabeService — Rücknahme an der Theke (Issue 0010) und Prüfprotokoll (Issue 0011).
 
 BR-RP-01..05 (ADR-0003: ein Service je fachlichem Vorgang).
+Erweitert um Nutzungszähler und Wartungsfälligkeit (Issue 0012, BR-WA-01, BR-WA-02).
 """
 from __future__ import annotations
 
@@ -10,6 +11,7 @@ from app.errors import ConflictError, NotFoundError, ValidationError
 from app.models import Gegenstand, Pruefprotokoll
 from app.repositories.ausleihe_repository import AusleiheRepository
 from app.repositories.gegenstand_repository import GegenstandRepository
+from app.repositories.kategorie_repository import KategorieRepository
 from app.repositories.kaution_repository import KautionRepository
 from app.repositories.pruefprotokoll_repository import PruefprotokollRepository
 from app.services.audit_service import AuditService
@@ -25,12 +27,14 @@ class RueckgabeService:
         kaution_repository: KautionRepository,
         pruefprotokoll_repository: PruefprotokollRepository,
         audit_service: AuditService,
+        kategorie_repository: KategorieRepository,
     ) -> None:
         self._gegenstand_repository = gegenstand_repository
         self._ausleihe_repository = ausleihe_repository
         self._kaution_repository = kaution_repository
         self._pruefprotokoll_repository = pruefprotokoll_repository
         self._audit_service = audit_service
+        self._kategorie_repository = kategorie_repository
 
     def zuruecknehmen(self, gegenstand_id: str, auffaelligkeit: str | None = None) -> Gegenstand:
         gegenstand = self._gegenstand_repository.finden(gegenstand_id)
@@ -84,9 +88,17 @@ class RueckgabeService:
             self._kaution_repository.abzug_anwenden(kaution.id, kaution.betrag, voller_einbehalt=True)
             folgezustand = "ausgemustert"
             kaution_abzug = kaution.betrag
+        elif ergebnis == "unauffaellig":
+            self._kaution_repository.abzug_anwenden(kaution.id, effektiver_abzug)
+            neuer_zaehler = self._gegenstand_repository.nutzungszaehler_erhoehen(gegenstand.id)  # BR-WA-01
+            kategorie = self._kategorie_repository.finden(gegenstand.kategorie_id)
+            folgezustand = (
+                "wartungsfaellig" if neuer_zaehler >= kategorie.wartungsintervall else "verfuegbar"
+            )  # BR-WA-02
+            kaution_abzug = effektiver_abzug
         else:
             self._kaution_repository.abzug_anwenden(kaution.id, effektiver_abzug)
-            folgezustand = "verfuegbar" if ergebnis == "unauffaellig" else "wartungsfaellig"
+            folgezustand = "wartungsfaellig"
             kaution_abzug = effektiver_abzug
 
         self._ausleihe_repository.abschliessen(ausleihe.id)  # BR-RP-04
