@@ -36,6 +36,12 @@ class VormerkungRepository:
         self._conn.commit()
         return cursor.rowcount == 1
 
+    def warteschlangenlaenge(self, kategorie_id: str) -> int:  # SUC-05
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS anzahl FROM vormerkung WHERE kategorie_id = ?", (kategorie_id,)
+        ).fetchone()
+        return row["anzahl"]
+
     def warteschlange(self, kategorie_id: str) -> list[Vormerkung]:  # BR-VM-02
         rows = self._conn.execute(
             "SELECT * FROM vormerkung WHERE kategorie_id = ? ORDER BY eingangszeit", (kategorie_id,)

@@ -33,6 +33,8 @@ class GegenstandResponse(BaseModel):
     kaution: int
     nutzungszaehler: int
     zustand: str
+    rueckgabefrist: str | None = None
+    reserviertFuerMitgliedId: str | None = None
 
 
 class MitgliedAnlegenRequest(BaseModel):
@@ -88,3 +90,8 @@ class VormerkungResponse(BaseModel):
     kategorieId: str
     mitgliedId: str
     position: int
+
+
+class VerfuegbarkeitResponse(BaseModel):
+    anzahlVerfuegbar: int
+    warteschlangenlaenge: int

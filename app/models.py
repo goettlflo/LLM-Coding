@@ -89,3 +89,9 @@ class Reservierung:
     status: str
     erstellt_am: str
     verfallszeit: str
+
+
+@dataclass(frozen=True)
+class Verfuegbarkeit:
+    anzahl_verfuegbar: int
+    warteschlangenlaenge: int

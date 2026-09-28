@@ -51,6 +51,13 @@ class GegenstandRepository:
             return None
         return _to_gegenstand(row)
 
+    def anzahl_verfuegbar_fuer_kategorie(self, kategorie_id: str) -> int:  # SUC-05
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS anzahl FROM gegenstand WHERE kategorie_id = ? AND zustand = 'verfuegbar'",
+            (kategorie_id,),
+        ).fetchone()
+        return row["anzahl"]
+
     def zustand_wechseln_atomar(
         self, gegenstand_id: str, erwarteter_zustand: str, neuer_zustand: str, version: int
     ) -> bool:

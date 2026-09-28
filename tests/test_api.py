@@ -201,3 +201,72 @@ def test_suc_06_vormerkung_anlegen_liefert_position_br_vm_01_02(client: TestClie
     assert response.json()["position"] == 2
     assert response.json()["kategorieId"] == kategorie_id
     assert response.json()["mitgliedId"] == zweites_mitglied_id
+
+
+def test_suc_05_verfuegbarkeit_liefert_anzahl_und_warteschlange(client: TestClient) -> None:
+    kategorie_id = _kategorie_anlegen(client)
+    _gegenstand_anlegen(client, kategorie_id, "INV-020")
+    mitglied_id = _mitglied_anlegen(client, "Karim")
+    client.post(
+        f"/kategorien/{kategorie_id}/vormerkungen",
+        json={"mitgliedId": mitglied_id},
+        headers={"X-Rolle": "mitglied"},
+    )
+
+    response = client.get(f"/kategorien/{kategorie_id}/verfuegbarkeit")
+
+    assert response.status_code == 200
+    assert response.json()["anzahlVerfuegbar"] == 1
+    assert response.json()["warteschlangenlaenge"] == 1
+
+
+def test_suc_05_verfuegbarkeit_unbekannte_kategorie_404(client: TestClient) -> None:
+    response = client.get("/kategorien/unbekannt/verfuegbarkeit")
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "NOT_FOUND"
+
+
+def test_suc_04_gegenstand_lesen_ausgeliehen_enthaelt_rueckgabefrist(client: TestClient) -> None:
+    kategorie_id = _kategorie_anlegen(client)
+    gegenstand_id = _gegenstand_anlegen(client, kategorie_id)
+    mitglied_id = _mitglied_anlegen(client)
+    client.post(
+        f"/gegenstaende/{gegenstand_id}/ausgabe",
+        json={"mitgliedId": mitglied_id},
+        headers={"X-Rolle": "thekendienst"},
+    )
+
+    response = client.get(f"/gegenstaende/{gegenstand_id}")
+
+    assert response.status_code == 200
+    assert response.json()["zustand"] == "ausgeliehen"
+    assert response.json()["rueckgabefrist"] is not None
+
+
+def test_suc_04_gegenstand_lesen_reserviert_enthaelt_reservierten_mitglied_id(
+    client: TestClient,
+) -> None:
+    kategorie_id = _kategorie_anlegen(client)
+    gegenstand_id = _gegenstand_anlegen(client, kategorie_id)
+    ausleiher_id = _mitglied_anlegen(client, "Karim")
+    vormerker_id = _mitglied_anlegen(client, "Fatima")
+    client.post(
+        f"/gegenstaende/{gegenstand_id}/ausgabe",
+        json={"mitgliedId": ausleiher_id},
+        headers={"X-Rolle": "thekendienst"},
+    )
+    client.post(
+        f"/kategorien/{kategorie_id}/vormerkungen",
+        json={"mitgliedId": vormerker_id},
+        headers={"X-Rolle": "mitglied"},
+    )
+    kontext = client.app.state.kontext
+    kontext.rueckgabe_service.zuruecknehmen(gegenstand_id)
+    kontext.rueckgabe_service.pruefung_abschliessen(gegenstand_id, "unauffaellig")
+
+    response = client.get(f"/gegenstaende/{gegenstand_id}")
+
+    assert response.status_code == 200
+    assert response.json()["zustand"] == "reserviert"
+    assert response.json()["reserviertFuerMitgliedId"] == vormerker_id

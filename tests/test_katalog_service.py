@@ -44,3 +44,31 @@ def test_gegenstand_anlegen_und_abfragen(kontext: Anwendungskontext) -> None:
     assert gelesen.inventarnummer == "INV-003"
     assert gelesen.kaution == 20
     assert gelesen.zustand == "verfuegbar"
+
+
+def test_verfuegbarkeit_zaehlt_nur_verfuegbare_gegenstaende_suc_05(kontext: Anwendungskontext) -> None:
+    kategorie = kontext.katalog_service.kategorie_anlegen("Zelt", 14, 20, False)
+    kontext.katalog_service.gegenstand_anlegen("INV-010", kategorie.id, 100)
+    ausgeliehen = kontext.katalog_service.gegenstand_anlegen("INV-011", kategorie.id, 100)
+    mitglied = kontext.mitglied_service.mitglied_anlegen("Karim")
+    kontext.ausleihe_service.ausgeben(ausgeliehen.id, mitglied.id)
+
+    verfuegbarkeit = kontext.katalog_service.verfuegbarkeit(kategorie.id)
+
+    assert verfuegbarkeit.anzahl_verfuegbar == 1
+    assert verfuegbarkeit.warteschlangenlaenge == 0
+
+
+def test_verfuegbarkeit_liefert_warteschlangenlaenge_suc_05(kontext: Anwendungskontext) -> None:
+    kategorie = kontext.katalog_service.kategorie_anlegen("Zelt", 14, 20, False)
+    mitglied = kontext.mitglied_service.mitglied_anlegen("Karim")
+    kontext.vormerkung_service.vormerken(kategorie.id, mitglied.id)
+
+    verfuegbarkeit = kontext.katalog_service.verfuegbarkeit(kategorie.id)
+
+    assert verfuegbarkeit.warteschlangenlaenge == 1
+
+
+def test_verfuegbarkeit_mit_unbekannter_kategorie_wirft_not_found(kontext: Anwendungskontext) -> None:
+    with pytest.raises(NotFoundError):
+        kontext.katalog_service.verfuegbarkeit("unbekannt")

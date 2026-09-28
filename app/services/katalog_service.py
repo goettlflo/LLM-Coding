@@ -4,9 +4,10 @@ from __future__ import annotations
 from decimal import ROUND_HALF_UP, Decimal
 
 from app.errors import NotFoundError, ValidationError
-from app.models import Gegenstand, Kategorie
+from app.models import Gegenstand, Kategorie, Verfuegbarkeit
 from app.repositories.gegenstand_repository import GegenstandRepository
 from app.repositories.kategorie_repository import KategorieRepository
+from app.repositories.vormerkung_repository import VormerkungRepository
 
 KAUTION_SATZ = Decimal("0.2")
 KAUTION_MIN = 5
@@ -22,10 +23,14 @@ def kaution_berechnen(wiederbeschaffungswert: float) -> int:
 
 class KatalogService:
     def __init__(
-        self, kategorie_repository: KategorieRepository, gegenstand_repository: GegenstandRepository
+        self,
+        kategorie_repository: KategorieRepository,
+        gegenstand_repository: GegenstandRepository,
+        vormerkung_repository: VormerkungRepository,
     ) -> None:
         self._kategorie_repository = kategorie_repository
         self._gegenstand_repository = gegenstand_repository
+        self._vormerkung_repository = vormerkung_repository
 
     def kategorie_anlegen(
         self,
@@ -69,3 +74,11 @@ class KatalogService:
         if gegenstand is None:
             raise NotFoundError(f"Gegenstand {gegenstand_id} nicht gefunden")
         return gegenstand
+
+    def verfuegbarkeit(self, kategorie_id: str) -> Verfuegbarkeit:  # SUC-05
+        if self._kategorie_repository.finden(kategorie_id) is None:
+            raise NotFoundError(f"Kategorie {kategorie_id} nicht gefunden")
+        return Verfuegbarkeit(
+            anzahl_verfuegbar=self._gegenstand_repository.anzahl_verfuegbar_fuer_kategorie(kategorie_id),
+            warteschlangenlaenge=self._vormerkung_repository.warteschlangenlaenge(kategorie_id),
+        )

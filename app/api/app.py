@@ -20,6 +20,7 @@ from app.api.schemas import (
     MitgliedAnlegenRequest,
     MitgliedResponse,
     RuecknahmeRequest,
+    VerfuegbarkeitResponse,
     VormerkungAnlegenRequest,
     VormerkungResponse,
 )
@@ -96,7 +97,17 @@ def create_app(db_path: str) -> FastAPI:
     def gegenstand_lesen(
         gegenstand_id: str, kontext: Anwendungskontext = Depends(hole_kontext)
     ) -> GegenstandResponse:
-        return _zu_gegenstand_response(kontext.katalog_service.gegenstand_lesen(gegenstand_id))
+        gegenstand = kontext.katalog_service.gegenstand_lesen(gegenstand_id)
+        antwort = _zu_gegenstand_response(gegenstand)
+        if gegenstand.zustand == "ausgeliehen":
+            ausleihe = kontext.ausleihe_repository.finden_aktive_fuer_gegenstand(gegenstand_id)
+            if ausleihe is not None:
+                antwort.rueckgabefrist = ausleihe.rueckgabefrist
+        elif gegenstand.zustand == "reserviert":
+            reservierung = kontext.reservierung_repository.finden_aktiv_fuer_gegenstand(gegenstand_id)
+            if reservierung is not None:
+                antwort.reserviertFuerMitgliedId = reservierung.mitglied_id
+        return antwort
 
     @app.post("/mitglieder", response_model=MitgliedResponse, status_code=201)
     def mitglied_anlegen(
@@ -181,6 +192,16 @@ def create_app(db_path: str) -> FastAPI:
             kategorieId=vormerkung.kategorie_id,
             mitgliedId=vormerkung.mitglied_id,
             position=position,
+        )
+
+    @app.get("/kategorien/{kategorie_id}/verfuegbarkeit", response_model=VerfuegbarkeitResponse)
+    def kategorie_verfuegbarkeit(
+        kategorie_id: str, kontext: Anwendungskontext = Depends(hole_kontext)
+    ) -> VerfuegbarkeitResponse:
+        verfuegbarkeit = kontext.katalog_service.verfuegbarkeit(kategorie_id)
+        return VerfuegbarkeitResponse(
+            anzahlVerfuegbar=verfuegbarkeit.anzahl_verfuegbar,
+            warteschlangenlaenge=verfuegbarkeit.warteschlangenlaenge,
         )
 
     return app
