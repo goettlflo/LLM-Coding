@@ -31,6 +31,11 @@ class VormerkungRepository:
         ).fetchone()
         return row is not None
 
+    def entfernen_atomar(self, vormerkung_id: str) -> bool:  # BR-NL-02
+        cursor = self._conn.execute("DELETE FROM vormerkung WHERE id = ?", (vormerkung_id,))
+        self._conn.commit()
+        return cursor.rowcount == 1
+
     def warteschlange(self, kategorie_id: str) -> list[Vormerkung]:  # BR-VM-02
         rows = self._conn.execute(
             "SELECT * FROM vormerkung WHERE kategorie_id = ? ORDER BY eingangszeit", (kategorie_id,)

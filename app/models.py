@@ -79,3 +79,13 @@ class Vormerkung:
     kategorie_id: str
     mitglied_id: str
     eingangszeit: str
+
+
+@dataclass(frozen=True)
+class Reservierung:
+    id: str
+    gegenstand_id: str
+    mitglied_id: str
+    status: str
+    erstellt_am: str
+    verfallszeit: str

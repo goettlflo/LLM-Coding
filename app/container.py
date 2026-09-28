@@ -15,6 +15,7 @@ from app.repositories.kategorie_repository import KategorieRepository
 from app.repositories.kaution_repository import KautionRepository
 from app.repositories.mitglied_repository import MitgliedRepository
 from app.repositories.pruefprotokoll_repository import PruefprotokollRepository
+from app.repositories.reservierung_repository import ReservierungRepository
 from app.repositories.vormerkung_repository import VormerkungRepository
 from app.services.audit_service import AuditService
 from app.services.ausleihe_service import AusleiheService
@@ -35,6 +36,7 @@ class Anwendungskontext:
     kaution_repository: KautionRepository
     vormerkung_repository: VormerkungRepository
     pruefprotokoll_repository: PruefprotokollRepository
+    reservierung_repository: ReservierungRepository
     audit_repository: AuditRepository
     katalog_service: KatalogService
     mitglied_service: MitgliedService
@@ -54,11 +56,20 @@ def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
     kaution_repository = KautionRepository(conn)
     vormerkung_repository = VormerkungRepository(conn)
     pruefprotokoll_repository = PruefprotokollRepository(conn)
+    reservierung_repository = ReservierungRepository(conn)
     audit_repository = AuditRepository(conn)
 
     katalog_service = KatalogService(kategorie_repository, gegenstand_repository)
     mitglied_service = MitgliedService(mitglied_repository, einweisung_repository, ausleihe_repository)
     audit_service = AuditService(audit_repository)
+    vormerkung_service = VormerkungService(
+        kategorie_repository=kategorie_repository,
+        mitglied_repository=mitglied_repository,
+        vormerkung_repository=vormerkung_repository,
+        gegenstand_repository=gegenstand_repository,
+        mitglied_service=mitglied_service,
+        reservierung_repository=reservierung_repository,
+    )
     ausleihe_service = AusleiheService(
         gegenstand_repository=gegenstand_repository,
         kategorie_repository=kategorie_repository,
@@ -68,6 +79,8 @@ def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
         vormerkung_repository=vormerkung_repository,
         mitglied_service=mitglied_service,
         audit_service=audit_service,
+        vormerkung_service=vormerkung_service,
+        reservierung_repository=reservierung_repository,
     )
     rueckgabe_service = RueckgabeService(
         gegenstand_repository=gegenstand_repository,
@@ -76,12 +89,10 @@ def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
         pruefprotokoll_repository=pruefprotokoll_repository,
         audit_service=audit_service,
         kategorie_repository=kategorie_repository,
+        vormerkung_service=vormerkung_service,
     )
-    wartung_service = WartungService(gegenstand_repository=gegenstand_repository)
-    vormerkung_service = VormerkungService(
-        kategorie_repository=kategorie_repository,
-        mitglied_repository=mitglied_repository,
-        vormerkung_repository=vormerkung_repository,
+    wartung_service = WartungService(
+        gegenstand_repository=gegenstand_repository, vormerkung_service=vormerkung_service
     )
 
     return Anwendungskontext(
@@ -93,6 +104,7 @@ def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
         kaution_repository=kaution_repository,
         vormerkung_repository=vormerkung_repository,
         pruefprotokoll_repository=pruefprotokoll_repository,
+        reservierung_repository=reservierung_repository,
         audit_repository=audit_repository,
         katalog_service=katalog_service,
         mitglied_service=mitglied_service,

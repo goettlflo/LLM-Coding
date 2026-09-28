@@ -1,0 +1,59 @@
+= Issue 0018: Automatische Reservierungszuteilung
+:issue-id: 0018
+:type: Story
+:status: closed
+:priority: Must
+:refs: BR-VM-03, BR-VM-04, BR-VM-05, BR-VM-06, BR-VM-08, BR-NL-02
+
+== Beschreibung
+
+Wird ein Gegenstand nach der Prüfung (Issue 0011) oder nach Wartung (Issue 0014) verfügbar, prüft der VormerkungService die Warteschlange der Kategorie und reserviert atomar für das erste Mitglied. Reservierungen verfallen drei Kalendertage nach dem nächsten Öffnungstag; gesperrte Mitglieder werden übersprungen, ohne ihren Platz zu verlieren.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-VM-04
+Szenario: Reservierung entsteht an einem Tag ohne unmittelbar folgenden Öffnungstag
+  Angenommen ein Gegenstand wird nach der Prüfung am Mittwoch verfügbar
+  Und für seine Kategorie liegt eine Vormerkung vor
+  Wenn der Gegenstand für das erste Mitglied der Warteschlange reserviert wird
+  Dann beginnt die Verfallsfrist von drei Kalendertagen am folgenden Samstag
+
+# BR-VM-05
+Szenario: Reservierung verfällt ungenutzt
+  Angenommen eine Reservierung hat ihre Verfallsfrist erreicht
+  Und das reservierte Mitglied ist nicht erschienen
+  Wenn der nächste Öffnungstag beginnt
+  Dann wird der Gegenstand an das nächste Mitglied der Warteschlange vergeben
+  Oder er wird verfügbar, wenn die Warteschlange leer ist
+
+# BR-VM-08
+Szenario: Gesperrtes Mitglied behält Warteschlangenplatz
+  Angenommen das erste Mitglied der Warteschlange ist gesperrt
+  Wenn ein Gegenstand dieser Kategorie verfügbar wird
+  Dann wird die Reservierung für dieses Mitglied übersprungen
+  Und das Mitglied behält seinen Platz in der Warteschlange
+
+# BR-NL-02
+Szenario: Gegenstand wird gleichzeitig durch zwei Prüfungsabschlüsse verfügbar gemeldet
+  Angenommen für eine Kategorie liegt eine Vormerkung vor
+  Und zwei Gegenstände dieser Kategorie werden gleichzeitig verfügbar
+  Wenn beide Verfügbarkeitsmeldungen gleichzeitig verarbeitet werden
+  Dann wird nur einer der beiden Gegenstände für das erste Mitglied reserviert
+----
+
+== Abhängigkeiten
+
+- 0011 (Prüfprotokoll abschließen mit Kautionsentscheidung)
+- 0017 (Kategorie vormerken)
+
+== Analyse
+
+* Neue Tabelle `reservierung` (id, gegenstand_id, mitglied_id, status ∈ {aktiv, eingeloest, verfallen}, erstellt_am, verfallszeit) + Dataclass `Reservierung` + `ReservierungRepository` (anlegen, finden_aktiv_fuer_gegenstand, einloesen, verfallen_setzen).
+* Öffnungstag = Dienstag oder Samstag (Glossar). Hilfsfunktion `naechster_oeffnungstag(datum) -> date`: liefert `datum` selbst, wenn `datum.weekday()` ∈ {1 (Dienstag), 5 (Samstag)}, sonst den nächsten Tag mit dieser Eigenschaft. `verfallszeit = naechster_oeffnungstag(entstehungsdatum) + timedelta(days=3)` (BR-VM-04; beide Gherkin-Beispiele — Mittwoch und Samstag als Entstehungstag — ergeben denselben Dienstag als Verfallszeit, das ist korrekt und im Test so zu erwarten).
+* `VormerkungService.zuteilen(gegenstand_id, kategorie_id) -> Reservierung | None`: liest die Warteschlange (`vormerkung_repository.warteschlange`), iteriert in Reihenfolge; für jedes Mitglied prüft `mitglied_service.ist_gesperrt(mitglied_id)` — ist es gesperrt, wird es übersprungen und bleibt in der Warteschlange (BR-VM-08); ist es frei, wird sein Warteschlangenplatz **atomar entfernt** (neue Methode `VormerkungRepository.entfernen_atomar(vormerkung_id) -> bool`, einfaches `DELETE ... WHERE id = ?` mit Rowcount-Prüfung, analog zum optimistischen Locking bei `zustand_wechseln_atomar` — sichert BR-NL-02 bei zwei gleichzeitig frei werdenden Gegenständen derselben Kategorie: nur einer gewinnt das Löschen der Vormerkung), danach Reservierung anlegen und `gegenstand_repository.zustand_wechseln_atomar(gegenstand_id, "verfuegbar", "reserviert", version)`. Ist die Warteschlange leer oder sind alle Mitglieder gesperrt, bleibt der Gegenstand `verfuegbar`, keine Reservierung.
+* Aufruf-Stellen: `RueckgabeService.pruefung_abschliessen` ruft `vormerkung_service.zuteilen(...)` nur, wenn der ermittelte Folgezustand `verfuegbar` wäre (bei `wartungsfaellig` explizit NICHT, BR-VM-06; bei `ausgemustert` sowieso nicht relevant). `WartungService.wartung_abschliessen` ruft es ebenfalls auf, nachdem der Gegenstand auf `verfuegbar` gesetzt wurde. `WartungService.ausmustern` ruft es NICHT auf (BR-VM-07: Warteschlange bleibt unangetastet).
+* BR-VM-05 (Verfall): `VormerkungService.verfall_pruefen(gegenstand_id) -> None` — findet die aktive Reservierung des Gegenstands; ist `verfallszeit < heute`, wird sie auf `verfallen` gesetzt und `zuteilen(...)` erneut aufgerufen (nächstes Warteschlangenmitglied) bzw. der Gegenstand fällt auf `verfuegbar` zurück, wenn die Warteschlange leer ist. Da es keinen eigenen SUC für einen Öffnungstags-Batch gibt, wird diese Prüfung **lazy** beim nächsten `AusleiheService.ausgeben`-Aufruf für diesen Gegenstand ausgeführt (vor der Zustandsprüfung).
+* `AusleiheService.ausgeben` erweitert BR-AUS-01: `gegenstand.zustand == "verfuegbar"` ODER (`== "reserviert"` UND die aktive Reservierung gehört zum anfragenden `mitglied_id`) ist erlaubt. Vorher wird `vormerkung_service.verfall_pruefen(gegenstand_id)` aufgerufen und der Gegenstand danach neu gelesen. Bei erfolgreicher Ausgabe aus `reserviert` wird die Reservierung auf `eingeloest` gesetzt und der Zustandswechsel `reserviert -> ausgeliehen` (statt `verfuegbar -> ausgeliehen`) über `zustand_wechseln_atomar` vollzogen.
+* Tests: neues `tests/test_vormerkung_service.py` (erweitert) für BR-VM-03, BR-VM-04 (beide Gherkin-Beispiele), BR-VM-05, BR-VM-06, BR-VM-08, BR-NL-02 (Race analog zum bestehenden BR-NL-01-Testmuster: zwei Vormerkungs-Snapshots, zwei `entfernen_atomar`-Aufrufe für dieselbe Vormerkung, nur einer erfolgreich); Integrationstest in `tests/test_ausleihe_service.py` für die Abholung aus `reserviert`.

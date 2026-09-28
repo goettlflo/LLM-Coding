@@ -7,11 +7,15 @@ from __future__ import annotations
 from app.errors import ConflictError, NotFoundError, ValidationError
 from app.models import Gegenstand
 from app.repositories.gegenstand_repository import GegenstandRepository
+from app.services.vormerkung_service import VormerkungService
 
 
 class WartungService:
-    def __init__(self, gegenstand_repository: GegenstandRepository) -> None:
+    def __init__(
+        self, gegenstand_repository: GegenstandRepository, vormerkung_service: VormerkungService
+    ) -> None:
         self._gegenstand_repository = gegenstand_repository
+        self._vormerkung_service = vormerkung_service
 
     def wartung_abschliessen(self, gegenstand_id: str, rolle: str = "wart") -> Gegenstand:
         if rolle != "wart":  # BR-WA-04
@@ -30,6 +34,7 @@ class WartungService:
             raise ConflictError("Gegenstand wurde inzwischen anderweitig verändert")
 
         self._gegenstand_repository.nutzungszaehler_zuruecksetzen(gegenstand.id)  # BR-WA-03
+        self._vormerkung_service.zuteilen(gegenstand.id, gegenstand.kategorie_id)  # BR-VM-03
         return self._gegenstand_repository.finden(gegenstand.id)
 
     def ausmustern(self, gegenstand_id: str, rolle: str = "wart") -> Gegenstand:

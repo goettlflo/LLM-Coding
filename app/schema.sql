@@ -70,6 +70,16 @@ CREATE TABLE IF NOT EXISTS audit_log (
     referenz_id TEXT NOT NULL
 );
 
+-- Issue 0018: Reservierung nach automatischer Zuteilung (BR-VM-03, BR-VM-04)
+CREATE TABLE IF NOT EXISTS reservierung (
+    id TEXT PRIMARY KEY,
+    gegenstand_id TEXT NOT NULL REFERENCES gegenstand(id),
+    mitglied_id TEXT NOT NULL REFERENCES mitglied(id),
+    status TEXT NOT NULL DEFAULT 'aktiv',
+    erstellt_am TEXT NOT NULL,
+    verfallszeit TEXT NOT NULL
+);
+
 -- Issue 0011: Pruefprotokoll des Warts mit Kautionsentscheidung (BR-RP-05)
 CREATE TABLE IF NOT EXISTS pruefprotokoll (
     id TEXT PRIMARY KEY,

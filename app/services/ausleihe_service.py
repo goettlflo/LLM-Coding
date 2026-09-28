@@ -13,9 +13,11 @@ from app.repositories.gegenstand_repository import GegenstandRepository
 from app.repositories.kategorie_repository import KategorieRepository
 from app.repositories.kaution_repository import KautionRepository
 from app.repositories.mitglied_repository import MitgliedRepository
+from app.repositories.reservierung_repository import ReservierungRepository
 from app.repositories.vormerkung_repository import VormerkungRepository
 from app.services.audit_service import AuditService
 from app.services.mitglied_service import MitgliedService
+from app.services.vormerkung_service import VormerkungService
 
 AUSLEIHLIMIT = 3
 
@@ -31,6 +33,8 @@ class AusleiheService:
         vormerkung_repository: VormerkungRepository,
         mitglied_service: MitgliedService,
         audit_service: AuditService,
+        vormerkung_service: VormerkungService,
+        reservierung_repository: ReservierungRepository,
     ) -> None:
         self._gegenstand_repository = gegenstand_repository
         self._kategorie_repository = kategorie_repository
@@ -40,6 +44,8 @@ class AusleiheService:
         self._vormerkung_repository = vormerkung_repository
         self._mitglied_service = mitglied_service
         self._audit_service = audit_service
+        self._vormerkung_service = vormerkung_service
+        self._reservierung_repository = reservierung_repository
 
     def ausgeben(self, gegenstand_id: str, mitglied_id: str) -> Ausleihe:
         gegenstand = self._gegenstand_repository.finden(gegenstand_id)
@@ -61,15 +67,32 @@ class AusleiheService:
         ):  # BR-AUS-04
             raise ValidationError("Einweisung für diese Kategorie fehlt", code="INSTRUCTION_REQUIRED")
 
-        if gegenstand.zustand != "verfuegbar":  # BR-AUS-01
+        self._vormerkung_service.verfall_pruefen(gegenstand_id)  # BR-VM-05
+        gegenstand = self._gegenstand_repository.finden(gegenstand_id)
+
+        reservierung = None
+        if gegenstand.zustand == "reserviert":
+            reservierung = self._reservierung_repository.finden_aktiv_fuer_gegenstand(gegenstand_id)
+
+        # BR-AUS-01 erweitert um BR-VM-03: reserviert nur für das reservierende Mitglied abholbar
+        if gegenstand.zustand == "verfuegbar":
+            erwarteter_zustand = "verfuegbar"
+        elif gegenstand.zustand == "reserviert" and reservierung is not None and (
+            reservierung.mitglied_id == mitglied_id
+        ):
+            erwarteter_zustand = "reserviert"
+        else:
             raise ConflictError("Gegenstand ist nicht verfügbar")
 
         # BR-NL-01: atomarer Zustandswechsel, verliert den Wettlauf bei gleichzeitigem Zugriff
         erfolgreich = self._gegenstand_repository.zustand_wechseln_atomar(
-            gegenstand.id, "verfuegbar", "ausgeliehen", gegenstand.version
+            gegenstand.id, erwarteter_zustand, "ausgeliehen", gegenstand.version
         )
         if not erfolgreich:
             raise ConflictError("Gegenstand wurde inzwischen anderweitig ausgegeben")
+
+        if erwarteter_zustand == "reserviert":
+            self._reservierung_repository.status_setzen(reservierung.id, "eingeloest")
 
         ausgabedatum = date.today()
         rueckgabefrist = ausgabedatum + timedelta(days=kategorie.leihdauer_tage)

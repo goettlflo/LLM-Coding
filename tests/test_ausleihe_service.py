@@ -177,3 +177,44 @@ def test_verlaengerung_ueberfaelliger_ausleihe_wird_abgelehnt_br_aus_07(
 
     with pytest.raises(ConflictError):
         kontext.ausleihe_service.verlaengern(ausleihe.id)
+
+
+def test_reservierendes_mitglied_kann_reservierten_gegenstand_abholen_br_vm_03(
+    kontext: Anwendungskontext,
+) -> None:
+    kategorie = _kategorie(kontext)
+    gegenstand = _gegenstand(kontext, kategorie.id, inventarnummer="INV-reserviert")
+    ausleiher = _mitglied(kontext, "Karim")
+    reservierendes_mitglied = _mitglied(kontext, "Fatima")
+    ausleihe_erster = kontext.ausleihe_service.ausgeben(gegenstand.id, ausleiher.id)
+    kontext.rueckgabe_service.zuruecknehmen(gegenstand.id)
+    kontext.vormerkung_service.vormerken(kategorie.id, reservierendes_mitglied.id)
+    kontext.rueckgabe_service.pruefung_abschliessen(gegenstand.id, "unauffaellig")
+    zwischenstand = kontext.gegenstand_repository.finden(gegenstand.id)
+    assert zwischenstand.zustand == "reserviert"
+
+    ausleihe = kontext.ausleihe_service.ausgeben(gegenstand.id, reservierendes_mitglied.id)
+
+    assert ausleihe.mitglied_id == reservierendes_mitglied.id
+    ergebnis = kontext.gegenstand_repository.finden(gegenstand.id)
+    assert ergebnis.zustand == "ausgeliehen"
+    reservierung = kontext.reservierung_repository.finden_aktiv_fuer_gegenstand(gegenstand.id)
+    assert reservierung is None
+    assert ausleihe_erster.id is not None
+
+
+def test_anderes_mitglied_kann_reservierten_gegenstand_nicht_abholen_br_vm_03(
+    kontext: Anwendungskontext,
+) -> None:
+    kategorie = _kategorie(kontext)
+    gegenstand = _gegenstand(kontext, kategorie.id, inventarnummer="INV-reserviert-2")
+    ausleiher = _mitglied(kontext, "Karim")
+    reservierendes_mitglied = _mitglied(kontext, "Fatima")
+    fremdes_mitglied = _mitglied(kontext, "Nora")
+    kontext.ausleihe_service.ausgeben(gegenstand.id, ausleiher.id)
+    kontext.rueckgabe_service.zuruecknehmen(gegenstand.id)
+    kontext.vormerkung_service.vormerken(kategorie.id, reservierendes_mitglied.id)
+    kontext.rueckgabe_service.pruefung_abschliessen(gegenstand.id, "unauffaellig")
+
+    with pytest.raises(ConflictError):
+        kontext.ausleihe_service.ausgeben(gegenstand.id, fremdes_mitglied.id)

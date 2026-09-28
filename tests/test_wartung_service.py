@@ -72,6 +72,23 @@ def test_wartung_abschliessen_unbekannter_gegenstand_wird_abgelehnt(
         kontext.wartung_service.wartung_abschliessen("unbekannt")
 
 
+def test_wartung_abschliessen_mit_offener_vormerkung_ergibt_reserviert_br_vm_03(
+    kontext: Anwendungskontext,
+) -> None:
+    gegenstand = _wartungsfaellig(kontext)
+    kategorie_id = gegenstand.kategorie_id
+    vormerker = _mitglied(kontext, "Nora")
+    kontext.vormerkung_service.vormerken(kategorie_id, vormerker.id)
+
+    kontext.wartung_service.wartung_abschliessen(gegenstand.id)
+
+    ergebnis = kontext.gegenstand_repository.finden(gegenstand.id)
+    assert ergebnis.zustand == "reserviert"
+    reservierung = kontext.reservierung_repository.finden_aktiv_fuer_gegenstand(gegenstand.id)
+    assert reservierung is not None
+    assert reservierung.mitglied_id == vormerker.id
+
+
 def test_ausmustern_laesst_vormerkungs_warteschlange_unveraendert_br_vm_07(
     kontext: Anwendungskontext, conn: sqlite3.Connection
 ) -> None:

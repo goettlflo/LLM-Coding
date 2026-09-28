@@ -15,6 +15,7 @@ from app.repositories.kategorie_repository import KategorieRepository
 from app.repositories.kaution_repository import KautionRepository
 from app.repositories.pruefprotokoll_repository import PruefprotokollRepository
 from app.services.audit_service import AuditService
+from app.services.vormerkung_service import VormerkungService
 
 ERGEBNISSE = {"unauffaellig", "wartungsfaellig", "verloren"}
 
@@ -28,6 +29,7 @@ class RueckgabeService:
         pruefprotokoll_repository: PruefprotokollRepository,
         audit_service: AuditService,
         kategorie_repository: KategorieRepository,
+        vormerkung_service: VormerkungService,
     ) -> None:
         self._gegenstand_repository = gegenstand_repository
         self._ausleihe_repository = ausleihe_repository
@@ -35,6 +37,7 @@ class RueckgabeService:
         self._pruefprotokoll_repository = pruefprotokoll_repository
         self._audit_service = audit_service
         self._kategorie_repository = kategorie_repository
+        self._vormerkung_service = vormerkung_service
 
     def zuruecknehmen(self, gegenstand_id: str, auffaelligkeit: str | None = None) -> Gegenstand:
         gegenstand = self._gegenstand_repository.finden(gegenstand_id)
@@ -108,6 +111,9 @@ class RueckgabeService:
         )
         if not erfolgreich:
             raise ConflictError("Gegenstand wurde inzwischen anderweitig verändert")
+
+        if folgezustand == "verfuegbar":  # BR-VM-03
+            self._vormerkung_service.zuteilen(gegenstand.id, gegenstand.kategorie_id)
 
         pruefprotokoll = self._pruefprotokoll_repository.anlegen(
             gegenstand_id=gegenstand.id,
