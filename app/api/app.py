@@ -167,7 +167,7 @@ def create_app(db_path: str) -> FastAPI:
         kontext: Anwendungskontext = Depends(hole_kontext),
     ):
         if x_rolle == "mitglied" and x_mitglied_id is None:
-            raise RolleNichtErlaubtError("Mitgliedsrolle erfordert den Header 'X-Mitglied-Id'")
+            raise ValidationError("Mitgliedsrolle erfordert den Header 'X-Mitglied-Id'", code="FORBIDDEN")
         ausleihe = kontext.ausleihe_service.verlaengern(
             ausleihe_id, anfragendes_mitglied_id=x_mitglied_id if x_rolle == "mitglied" else None
         )
