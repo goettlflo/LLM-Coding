@@ -1,7 +1,7 @@
 = Issue 0021: Verfügbarkeitsabfrage
 :issue-id: 0021
 :type: EPIC
-:status: open
+:status: closed
 :priority: Should
 :refs: UC-08
 
