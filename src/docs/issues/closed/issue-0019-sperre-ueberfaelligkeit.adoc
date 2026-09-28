@@ -1,7 +1,7 @@
 = Issue 0019: Sperre bei Überfälligkeit
 :issue-id: 0019
 :type: EPIC
-:status: open
+:status: closed
 :priority: Must
 :refs: BR-SP-01, BR-SP-02, BR-SP-03
 
