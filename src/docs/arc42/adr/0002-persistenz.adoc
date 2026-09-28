@@ -1,0 +1,32 @@
+= ADR-0002: Persistenz
+Status: Akzeptiert
+
+== Kontext
+
+PRD, Abschnitt "Rahmenbedingungen": Ein Prozess, lokal startbar, ohne externe Dienste.
+Umfang: rund 400 Gegenstände, 800 Mitglieder — kleine Datenmenge.
+Qualitätsziel "Antwortzeit": unter 300 ms (95. Perzentil) bei dieser Last.
+BR-NL-01/02 verlangen atomare Schreiboperationen bei gleichzeitigem Zugriff.
+
+== Entscheidung
+
+SQLite als eingebettete Datei-Datenbank. Die Datenbankdatei liegt lokal neben dem Prozess, kein separater Serverprozess nötig.
+
+== Pugh-Matrix (Baseline: In-Memory mit Datei-Snapshot)
+
+[cols="2,1,1"]
+|===
+|Kriterium |In-Memory + Snapshot |SQLite (Datei)
+
+|Erfüllt "ohne externe Dienste" |S (Baseline) |S
+|Transaktionale Atomarität (BR-NL-01/02) |- |+
+|Absturzsicherheit (Audit-Log, Kautionsbewegungen) |- |+
+|Implementierungsaufwand |+ |0
+|Antwortzeit bei 400/800 Datensätzen |+ |0
+|===
+
+== Konsequenzen
+
+* DB-Zugriff wird separat entschieden (ADR-0004).
+* Migrationen (Schema-Aufbau) müssen versioniert werden, auch ohne ORM — eigenes Schema-Skript unter Versionskontrolle.
+* Backups sind eine Datei-Kopie; kein Betriebsthema für dieses Release (siehe PRD "Nicht-Ziele").

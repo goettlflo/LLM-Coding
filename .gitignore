@@ -1,0 +1,29 @@
+# docToolchain (dtcw) build output and caches
+build/
+.gradle/
+.doctoolchain/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors/IDEs
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+
+# Language-agnostic build artifacts (Technologie ist laut PRD frei wählbar)
+node_modules/
+dist/
+target/
+bin/
+obj/
+*.class
+__pycache__/
+*.pyc
+.venv/
+*.db

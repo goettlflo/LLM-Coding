@@ -1,0 +1,37 @@
+= Issue 0022: Gegenstand-/Kategorie-Status abfragen
+:issue-id: 0022
+:type: Story
+:status: closed
+:priority: Should
+:refs: UC-08, SUC-04, SUC-05
+
+== Beschreibung
+
+KatalogService: rein lesende Abfrage von Gegenstandszustand (inkl. Reservierungsinhaber) und Kategorie-Verfügbarkeit (Anzahl freier Gegenstände, Warteschlangenlänge). Muss das Antwortzeit-Qualitätsziel (< 300 ms, arc42 Kapitel 10, QS-04) einhalten.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given 400 Gegenstände und 800 Mitglieder im System
+When die Verfügbarkeit eines Gegenstands abgefragt wird
+Then antwortet das System in unter 300 ms (95. Perzentil über 100 Aufrufe)
+And der Aufruf verändert keinen Zustand
+----
+
+== Abhängigkeiten
+
+- 0003 (Gegenstand/Kategorie anlegen und abfragen)
+- 0017 (Kategorie vormerken)
+
+== Analyse
+
+* SUC-04 (`GET /gegenstaende/{id}`) existiert bereits (Issue 0003), liefert aber noch keine Rückgabefrist/Reservierungsinhaber. Erweiterung: `GegenstandResponse` bekommt optionale Felder `rueckgabefrist: str | None` und `reserviertFuerMitgliedId: str | None`. `KatalogService.gegenstand_lesen` bleibt unverändert (liefert weiterhin die reine `Gegenstand`-Domänenentität); die Anreicherung um Ausleihe-/Reservierungsdaten geschieht im API-Controller (`_zu_gegenstand_response`), da `KatalogService` bewusst keine Abhängigkeit zu `AusleiheRepository`/`ReservierungRepository` hat (ADR-0003: ein Service pro Aggregat) — der Controller hat bereits Zugriff auf den vollständigen `Anwendungskontext`.
+  ** `rueckgabefrist`: nur gesetzt, wenn `zustand == "ausgeliehen"` — Lookup über `ausleihe_repository.finden_aktive_fuer_gegenstand(gegenstand_id)`.
+  ** `reserviertFuerMitgliedId`: nur gesetzt, wenn `zustand == "reserviert"` — Lookup über `reservierung_repository.finden_aktiv_fuer_gegenstand(gegenstand_id)`.
+* SUC-05 (`GET /kategorien/{id}/verfuegbarkeit`) ist neu: neue Methode `KatalogService.verfuegbarkeit(kategorie_id) -> Verfuegbarkeit` (neue leichte Dataclass `Verfuegbarkeit` mit `anzahl_verfuegbar: int`, `warteschlangenlaenge: int`), 404 wenn Kategorie unbekannt.
+* Neue Repository-Methoden (rein lesend, kein Zustand verändert):
+  ** `GegenstandRepository.anzahl_verfuegbar_fuer_kategorie(kategorie_id) -> int` (`SELECT COUNT(*) FROM gegenstand WHERE kategorie_id = ? AND zustand = 'verfuegbar'`).
+  ** `VormerkungRepository.warteschlangenlaenge(kategorie_id) -> int` (`SELECT COUNT(*) FROM vormerkung WHERE kategorie_id = ?`, oder `len(warteschlange(...))` wiederverwenden).
+* Qualitätsziel (< 300 ms, 95. Perzentil) wird durch die einfachen indizierbaren `COUNT`-Abfragen auf Primärschlüssel-nahen Spalten erreicht; kein zusätzlicher Index nötig bei den in QS-04 genannten Datenmengen (400/800 Datensätze). Kein automatisierter Performance-Test in dieser Story (Lasttest wäre eigenes Vorhaben) — funktional getestet über Korrektheit von Zähler/Länge.
+* Tests: Erweiterung `tests/test_katalog_service.py` (falls vorhanden, sonst `tests/test_api.py`) für SUC-04-Erweiterung und SUC-05.

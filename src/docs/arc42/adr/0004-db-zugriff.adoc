@@ -1,0 +1,30 @@
+= ADR-0004: Datenbankzugriff
+Status: Akzeptiert
+
+== Kontext
+
+SQLite als Persistenz steht fest (ADR-0002). Es braucht eine Zugriffsschicht für die Repositories aus ADR-0003.
+Team-Vorgabe (Rückfrage 2026-09-28): kein ORM.
+
+== Entscheidung
+
+Direkter Zugriff über die Standardbibliothek `sqlite3`, gekapselt in einem Repository je Aggregat. SQL wird explizit geschrieben, kein automatisches Mapping.
+Schema-Aufbau über ein versioniertes SQL-Skript (`schema.sql`), keine Migrationsbibliothek.
+
+== Pugh-Matrix (Baseline: SQLAlchemy)
+
+[cols="2,1,1"]
+|===
+|Kriterium |SQLAlchemy (ORM) |Raw `sqlite3` + Repository
+
+|Kontrolle über Transaktionsgrenzen (BR-NL-01/02) |S (Baseline) |+
+|Zusatzabhängigkeit |- |+
+|Lernkurve/Overhead für kleines Schema (6 Aggregate) |- |+
+|Migrationswerkzeug (Alembic) |+ |-
+|===
+
+== Konsequenzen
+
+* Jede Schreiboperation, die eine Geschäftsregel mit Nebenläufigkeitsanforderung durchsetzt (BR-NL-01, BR-NL-02), öffnet die Transaktion explizit im Repository, nicht in der Service-Schicht — siehe ADR-0006.
+* Schema-Änderungen sind manuell zu pflegen; ein Test prüft, dass `schema.sql` gegen eine leere Datenbank fehlerfrei läuft.
+* Kein automatisches Mapping bedeutet: Repository-Methoden geben Domänen-Objekte (Dataclasses) zurück, nicht Zeilen-Tupel — das Mapping steht explizit im Repository-Code.

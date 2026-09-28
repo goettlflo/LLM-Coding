@@ -1,0 +1,28 @@
+= Issue 0006: Ausleihe-Prozess
+:issue-id: 0006
+:type: EPIC
+:status: closed
+:priority: Must
+:refs: UC-01, UC-02
+
+== Beschreibung
+
+Ausgabe eines Gegenstands an der Theke und dessen Verlängerung — der Kernprozess, den Karim (Thekendienst) in Sekunden abwickeln will (PRD Persona).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given ein verfügbarer, nicht einweisungspflichtiger Gegenstand und ein unbeschränktes Mitglied
+When das Mitglied den Gegenstand ausleiht
+Then wird die Ausleihe angelegt, die Kaution hinterlegt und die Rückgabefrist gesetzt
+----
+
+== Enthaltene Stories
+
+- 0007 Ausgabe eines Gegenstands
+- 0008 Ausleihe verlängern
+
+== Abhängigkeiten
+
+- 0001 (Katalog-Grundlage)

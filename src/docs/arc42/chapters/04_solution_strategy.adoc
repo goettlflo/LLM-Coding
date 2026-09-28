@@ -1,0 +1,24 @@
+:jbake-title: Lösungsstrategie
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 4
+:filename: /chapters/04_solution_strategy.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-solution-strategy]]
+== Lösungsstrategie
+
+* Klassische Schichtenarchitektur: Controller/CLI → Service → Repository → SQLite (ADR-0003).
+* Python/FastAPI für die REST-API, Typer für die CLI (ADR-0001, ADR-0005).
+* SQLite als eingebettete Datei-Datenbank, Zugriff über raw `sqlite3` statt ORM (ADR-0002, ADR-0004).
+* Optimistisches Locking (Versions-Spalte) setzt die Nebenläufigkeitsregeln BR-NL-01/02 durch (ADR-0006).
+* Geschäftsregeln (BR-*) leben ausschließlich in der Service-Schicht — REST und CLI rufen dieselben Services auf, damit beide Schnittstellen identisch validieren.
+* Jede Zustandsänderung und Kautionsbewegung schreibt einen Audit-Eintrag (Kapitel 8.4) — trägt Qualitätsziel 3 (Nachvollziehbarkeit).
+* Einweisungsprüfung (BR-AUS-04) ist eine Pflichtprüfung im AusleiheService, nicht optional/nachträglich — trägt Qualitätsziel 1 (Sicherheit).
+
+Details und Alternativen je Entscheidung: Kapitel 9 und `src/docs/arc42/adr/`.

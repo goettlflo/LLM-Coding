@@ -1,0 +1,38 @@
+= Issue 0026: Bug — Leere Namen werden bei Mitglied/Kategorie ohne Validierung akzeptiert
+:issue-id: 0026
+:type: Bug
+:status: open
+:priority: Could
+:refs: BR-KAT-01, BR-KAT-05, BR-MIT-01
+
+== Beschreibung
+
+Gefunden bei manuellen Tests der Ausleihen-API am 2026-09-28.
+
+`POST /mitglieder` und `POST /kategorien` akzeptieren jeweils einen leeren `name`:
+
+[source,json]
+----
+POST /mitglieder    { "name": "" }   -> 201 Created
+POST /kategorien    { "name": "" }   -> 201 Created
+----
+
+Erwartet: `422`, da ein leerer Name fachlich sinnlos ist.
+
+Ursache: `MitgliedAnlegenRequest.name` und `KategorieAnlegenRequest.name` (app/api/schemas.py) sind als `str` ohne `min_length` deklariert.
+
+Spec-Nachtrag (2026-09-28): BR-KAT-05 und BR-MIT-01 in geschaeftsregeln.adoc sowie die entsprechenden Zeilen in der Validierungsregeln-Tabelle (supplementary.adoc) ergänzt.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given eine Anfrage zum Anlegen eines Mitglieds oder einer Kategorie
+When der Name ein leerer String ist
+Then antwortet das System mit 422 VALIDATION_ERROR
+----
+
+== Abhängigkeiten
+
+- 0003 (Gegenstand/Kategorie)
+- 0004 (Mitglied/Einweisung)

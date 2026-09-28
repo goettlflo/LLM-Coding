@@ -1,0 +1,51 @@
+:jbake-title: Laufzeitsicht
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 6
+:filename: /chapters/06_runtime_view.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-runtime-view]]
+== Laufzeitsicht
+
+Ausführliche Aktivitätsdiagramme (inkl. Extensions, nicht nur Happy Path) stehen in `src/docs/specs/aktivitaetsdiagramme.adoc`. Diese Sicht ergänzt die technische Interaktion zwischen den Bausteinen aus Kapitel 5.
+
+=== Ausgabe eines Gegenstands (UC-01, SUC-01)
+
+[plantuml]
+----
+@startuml
+actor Thekendienst
+participant "REST: SUC-01" as REST
+participant AusleiheService
+participant GegenstandRepository
+database SQLite
+
+Thekendienst -> REST: POST /gegenstaende/{id}/ausgabe
+REST -> AusleiheService: ausgeben(gegenstandId, mitgliedId)
+AusleiheService -> GegenstandRepository: findeMitVersion(id)
+GegenstandRepository -> SQLite: SELECT ... WHERE id = ?
+AusleiheService -> AusleiheService: prüfe BR-AUS-01..05
+AusleiheService -> GegenstandRepository: aktualisiereAtomar(id, version)
+GegenstandRepository -> SQLite: UPDATE ... WHERE id=? AND version=?
+alt Version stimmt nicht mehr (BR-NL-01)
+  GegenstandRepository --> AusleiheService: Konflikt
+  AusleiheService --> REST: 409 ITEM_NOT_AVAILABLE
+else erfolgreich
+  GegenstandRepository --> AusleiheService: ok
+  AusleiheService --> REST: 201 Ausleihe-Ressource
+end
+REST --> Thekendienst: Antwort
+@enduml
+----
+
+Besonderheit: Lesen (`findeMitVersion`) und Schreiben (`aktualisiereAtomar`) liegen in derselben Transaktion; die Versionsprüfung im `WHERE` ist die einzige Stelle, die BR-NL-01 durchsetzt (ADR-0006).
+
+=== Prüfung abschließen mit Reservierungszuteilung (UC-04, SUC-07)
+
+Siehe Aktivitätsdiagramm "Rückgabe und Prüfung" in `aktivitaetsdiagramme.adoc` — zeigt alle drei Prüfergebnisse (unauffällig/wartungsfällig/verloren) und die anschließende, atomare Reservierungszuteilung (BR-NL-02).

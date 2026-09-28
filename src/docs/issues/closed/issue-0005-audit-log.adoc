@@ -1,0 +1,24 @@
+= Issue 0005: Audit-Log-Infrastruktur
+:issue-id: 0005
+:type: Story
+:status: closed
+:priority: Must
+:refs: BR-KAU-04, arc42 Kapitel 8.4
+
+== Beschreibung
+
+Wiederverwendbarer AuditService, den alle folgenden Services aufrufen, um Zustands- und Kautionsänderungen mit Zeitstempel, Betrag/Zustand und Auslöser zu protokollieren (append-only, siehe arc42 Kapitel 8.2/8.4).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given ein beliebiger Service ruft den AuditService auf
+When ein Ereignis (Zustandswechsel oder Kautionsbewegung) protokolliert wird
+Then entsteht ein unveränderlicher Eintrag mit Zeitstempel, Betrag/Zustand und Auslöser
+And bestehende Einträge werden nie verändert oder gelöscht
+----
+
+== Abhängigkeiten
+
+- 0002 (Projekt-Grundgerüst)

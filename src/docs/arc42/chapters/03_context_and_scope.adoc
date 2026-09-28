@@ -1,0 +1,44 @@
+:jbake-title: Kontextabgrenzung
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 3
+:filename: /chapters/03_context_and_scope.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-context-and-scope]]
+== Kontextabgrenzung
+
+=== Fachlicher Kontext
+
+[plantuml]
+----
+@startuml
+!include <C4/C4_Context>
+Person(thekendienst, "Thekendienst", "gibt Gegenstände aus, nimmt sie zurück")
+Person(mitglied, "Mitglied", "leiht, verlängert, merkt vor")
+Person(wart, "Wart", "prüft, wartet, mustert aus")
+System(leihgut, "Leihgut-System", "Katalog, Ausleihe, Kaution, Wartung, Vormerkung")
+Rel(thekendienst, leihgut, "Ausgabe, Rücknahme (UC-01, UC-03)")
+Rel(mitglied, leihgut, "Verfügbarkeit prüfen, verlängern, vormerken (UC-02, UC-07, UC-08)")
+Rel(wart, leihgut, "Prüfung/Wartung/Ausmusterung abschließen (UC-04..06)")
+@enduml
+----
+
+Kein externes Nachbarsystem: kein Zahlungsanbieter, kein Mailversand, keine Cloud (PRD "Nicht-Ziele", "Rahmenbedingungen").
+
+=== Technischer Kontext
+
+[cols="1,1,3" options="header"]
+|===
+|Kanal |Nutzer |Fachliche Ein-/Ausgabe
+
+|REST-API (HTTPS/JSON) |Thekendienst, Mitglied, Wart |Alle Use Cases UC-01..08, siehe `system-use-cases.adoc` SUC-01..06
+|CLI (Terminal) |Wart |Prüfung/Wartung/Ausmusterung, siehe `system-use-cases.adoc` SUC-07..09
+|===
+
+Rolle wird pro Aufruf über Header `X-Rolle` (REST) bzw. Flag `--rolle` (CLI) mitgegeben, nicht geprüft (PRD "Authentifizierung", Risiko R-01).

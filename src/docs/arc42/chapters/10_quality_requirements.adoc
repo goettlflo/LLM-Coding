@@ -1,0 +1,109 @@
+:jbake-title: Qualitätsanforderungen
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 10
+:filename: /chapters/10_quality_requirements.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-quality-scenarios]]
+== Qualitätsanforderungen
+
+Kapitel 1.2 nennt die Top-4 Qualitätsziele. Dieses Kapitel deckt alle acht ISO-25010-Merkmale ab und markiert je Eintrag, ob er ein Top-Ziel konkretisiert oder zusätzlich abgeleitet ist.
+
+=== Übersicht der Qualitätsanforderungen
+
+[cols="1,3,1"]
+|===
+|ISO-25010-Merkmal |Bezug zum Leihgut-System |Bezug zu Kapitel 1.2
+
+|Funktionale Eignung |Vollständige Umsetzung der BR-Kataloge (BR-KAT/AUS/RP/KAU/WA/VM/SP/NL). |konkretisiert (alle Top-Ziele)
+|Zuverlässigkeit |ACID-Transaktionen (SQLite) verhindern inkonsistente Zwischenzustände bei Absturz. |abgeleitet
+|Leistungseffizienz |Antwortzeit < 300 ms bei 400/800 Datensätzen. |konkretisiert (Ziel 4)
+|Benutzbarkeit |Kein UI (PRD), daher kein Merkmal dieses Releases. |nicht zutreffend
+|Sicherheit |Einweisungsprüfung ohne Ausnahme, unabhängig von der Schnittstelle. |konkretisiert (Ziel 1)
+|Kompatibilität |Kein Nachbarsystem (PRD "ohne externe Dienste"). |nicht zutreffend
+|Wartbarkeit |Schichtenarchitektur (ADR-0003), BR-IDs 1:1 im Code auffindbar (Kapitel 5.2). |abgeleitet
+|Übertragbarkeit |Einzelner Python-Prozess, SQLite-Datei — auf jedem Rechner mit Python lauffähig. |abgeleitet
+|===
+
+=== Qualitätsszenarien
+
+Format: Quelle, Stimulus, Artefakt, Umgebung, Reaktion, Antwortmaß (6-teilig).
+
+==== QS-01: Sicherheit (konkretisiert Ziel 1)
+
+[cols="1,3"]
+|===
+|Quelle |Mitglied ohne dokumentierte Einweisung
+|Stimulus |Versucht, ein einweisungspflichtiges Gerät auszuleihen — über REST, dann erneut über CLI
+|Artefakt |AusleiheService (BR-AUS-04)
+|Umgebung |Regulärer Betrieb, beliebige Schnittstelle
+|Reaktion |Ausgabe wird abgelehnt, kein Zustand ändert sich
+|Antwortmaß |0 erfolgreiche Ausgaben von 100 Testaufrufen je Schnittstelle
+|===
+
+==== QS-02: Korrektheit der Kaution (konkretisiert Ziel 2)
+
+[cols="1,3"]
+|===
+|Quelle |Wart
+|Stimulus |Schließt die 50. Prüfung für ein Mitglied mit gemischten Abzügen und Freigaben ab
+|Artefakt |KautionService, Kautionsbewegung-Tabelle
+|Umgebung |Regulärer Betrieb
+|Reaktion |Saldo wird aus allen Bewegungen (Hinterlegung, Abzug, Freigabe) neu berechnet
+|Antwortmaß |Abweichung zwischen gespeichertem Saldo und Neuberechnung: 0 Cent
+|===
+
+==== QS-03: Nachvollziehbarkeit (konkretisiert Ziel 3)
+
+[cols="1,3"]
+|===
+|Quelle |Wart
+|Stimulus |Schließt eine Prüfung mit Kautionsabzug ab
+|Artefakt |AuditService
+|Umgebung |Regulärer Betrieb
+|Reaktion |Ein Audit-Eintrag mit Zeitstempel, Betrag, Auslöser und Verweis auf das Prüfprotokoll entsteht
+|Antwortmaß |Jeder Abschluss erzeugt genau einen Audit-Eintrag, nachweisbar durch DB-Abfrage
+|===
+
+==== QS-04: Antwortzeit (konkretisiert Ziel 4)
+
+[cols="1,3"]
+|===
+|Quelle |Thekendienst
+|Stimulus |Fragt Ausgabefähigkeit eines Gegenstands ab
+|Artefakt |KatalogService, SQLite-Repository
+|Umgebung |400 Gegenstände, 800 Mitglieder, ein Prozess
+|Reaktion |System antwortet mit Verfügbarkeitsstatus
+|Antwortmaß |< 300 ms, 95. Perzentil über 100 Aufrufe
+|===
+
+==== QS-05: Nebenläufigkeit (abgeleitet, BR-NL-01/02)
+
+[cols="1,3"]
+|===
+|Quelle |Zwei Thekendienste
+|Stimulus |Beide lösen gleichzeitig eine Ausgabe desselben Gegenstands aus
+|Artefakt |GegenstandRepository, optimistisches Locking (ADR-0006)
+|Umgebung |Regulärer Betrieb, ein Prozess
+|Reaktion |Genau ein Versuch gelingt, der andere wird mit 409 abgelehnt
+|Antwortmaß |0 Fälle von doppelter Ausgabe in 1000 simulierten Wettlaufsituationen
+|===
+
+==== QS-06: Wartbarkeit (abgeleitet)
+
+[cols="1,3"]
+|===
+|Quelle |Entwickler:in
+|Stimulus |Ändert eine Geschäftsregel (z. B. BR-AUS-02, Limit von drei auf vier Ausleihen)
+|Artefakt |AusleiheService
+|Umgebung |Entwicklungsumgebung
+|Reaktion |Änderung ist in genau einer Methode einer Service-Klasse lokalisiert, kein Eingriff in REST-/CLI-Code nötig
+|Antwortmaß |1 geänderte Methode, 0 geänderte Controller/CLI-Dateien
+|===
+

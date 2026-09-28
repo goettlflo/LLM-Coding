@@ -1,0 +1,47 @@
+:jbake-title: Einführung und Ziele
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 1
+:filename: /chapters/01_introduction_and_goals.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-introduction-and-goals]]
+==	Einführung und Ziele
+
+=== Aufgabenstellung
+
+Der Verein "Bibliothek der Dinge" verleiht rund 400 Gegenstände (Werkzeug, Geräte) an 800 Mitglieder, geöffnet dienstags und samstags.
+Heute läuft das über ein Ringbuch und Bargeld-Kautionen; Kautionen werden falsch ausgezahlt, Wartung wird übersehen, Vormerkungen werden nicht eingehalten.
+
+Das Leihgut-System soll der Theke jederzeit sagen, ob ein Gegenstand ausgegeben werden darf, jede Kautionsbewegung nachvollziehbar machen, wartungsfällige Geräte zurückhalten und Vormerkungen einhalten.
+
+Vollständige Anforderungen: `src/docs/specs/prd.adoc` (PRD), Geschäftsregeln mit BR-IDs in `src/docs/specs/geschaeftsregeln.adoc`, Use Cases in `src/docs/specs/use-cases.adoc` und `src/docs/specs/system-use-cases.adoc`.
+
+=== Qualitätsziele
+
+[cols="1,1,3" options="header"]
+|===
+|Rang |Qualitätsziel |Szenario / Messgröße
+
+|1 |Sicherheit |Ein Mitglied ohne Einweisung erhält über keine Schnittstelle ein einweisungspflichtiges Gerät (BR-AUS-04).
+|2 |Korrektheit der Kaution |Kautionssaldo ist aus den Bewegungen exakt nachrechenbar, Abweichung 0 Cent (BR-KAU-*).
+|3 |Nachvollziehbarkeit |Jede Zustands- und Kautionsänderung erzeugt einen Audit-Eintrag mit Zeitstempel, Betrag, Auslöser.
+|4 |Antwortzeit |Ausgabefähigkeits-Prüfung antwortet unter 300 ms (95. Perzentil, 100 Aufrufe) bei 400 Gegenständen/800 Mitgliedern.
+|===
+
+Quelle: PRD, Abschnitt "Qualitätsziele". Ausführliche Qualitätsszenarien (6-teilig) in Kapitel 10.
+
+=== Stakeholder
+
+[cols="1,1,2" options="header"]
+|===
+|Rolle |Vertreter |Erwartungshaltung
+|Thekendienst |Karim |Ausgabe-Entscheidung in Sekunden, Kaution nicht im Kopf ausrechnen.
+|Mitglied |Sabine |Verfügbarkeit vorab prüfen, vormerken können.
+|Wart |Rolf |Verlässliches Prüfprotokoll, klare Kautionsentscheidung.
+|===

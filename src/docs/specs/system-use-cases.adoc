@@ -1,0 +1,210 @@
+= Spezifikation: System Use Cases
+:toc: left
+:toclevels: 2
+:sectnums:
+:icons: font
+:revnumber: 1.0
+:revdate: 2026-09-28
+
+System Use Cases je technischer Schnittstelle: REST-API (alle Anwendungsfälle) und CLI (Aufgaben des Warts), siehe PRD "Rahmenbedingungen".
+Rollen kommen unauthentifiziert über Header (`X-Rolle`) bzw. CLI-Flag (`--rolle`), siehe PRD "Authentifizierung".
+Jede System-Use-Case-ID (SUC-ID) referenziert die Persona-Use-Case-ID (UC-ID) aus `use-cases.adoc`.
+
+== REST-API
+
+=== SUC-01: `POST /gegenstaende/{id}/ausgabe` (→ UC-01)
+
+[cols="1,4"]
+|===
+|Input |`{ "mitgliedId": string }`, Header `X-Rolle: thekendienst`
+|Validierung |`id` existiert, `mitgliedId` existiert, Rolle ist `thekendienst`.
+|===
+
+*Verarbeitung*: BR-AUS-01 … BR-AUS-05, BR-KAT-04, BR-NL-01 atomar prüfen und anwenden.
+
+[cols="1,1,3"]
+|===
+|Status |Bedingung |Body
+
+|201 |Ausgabe erfolgreich |Ausleihe-Ressource (Rückgabefrist, Kaution)
+|404 |`id` oder `mitgliedId` unbekannt |Fehlercode `NOT_FOUND`
+|409 |BR-AUS-01 (nicht verfügbar/reserviert), BR-NL-01 (Wettlauf verloren) |Fehlercode `ITEM_NOT_AVAILABLE`
+|422 |BR-AUS-02 (Limit), BR-AUS-03 (Sperre), BR-AUS-04 (Einweisung fehlt) |Fehlercode mit Regelbezug, z. B. `MEMBER_LOCKED`
+|403 |Rolle ≠ `thekendienst` |Fehlercode `FORBIDDEN`
+|===
+
+*EARS*:
+* When ein Ausgabe-Request eintrifft und alle Bedingungen aus BR-AUS-01 bis BR-AUS-05 erfüllt sind, shall das System die Ausgabe mit Status 201 bestätigen.
+* If zwei Ausgabe-Requests für denselben Gegenstand gleichzeitig eintreffen, shall das System genau einen mit 201 und den anderen mit 409 beantworten (BR-NL-01).
+
+=== SUC-02: `POST /ausleihen/{id}/verlaengerung` (→ UC-02)
+
+[cols="1,4"]
+|===
+|Input |kein Body, Header `X-Rolle: thekendienst` oder `mitglied`; bei Rolle `mitglied` zusätzlich Header `X-Mitglied-Id: string`
+|Validierung |`id` bezeichnet eine aktive Ausleihe. Bei Rolle `mitglied` muss `X-Mitglied-Id` mit `ausleihe.mitgliedId` übereinstimmen (BR-AUS-08).
+|===
+
+[cols="1,1,3"]
+|===
+|Status |Bedingung |Body
+
+|200 |Verlängerung erfolgreich |Ausleihe-Ressource mit neuer Rückgabefrist
+|404 |`id` unbekannt |Fehlercode `NOT_FOUND`
+|403 |Rolle `mitglied` und `X-Mitglied-Id` ≠ `ausleihe.mitgliedId` (BR-AUS-08) |Fehlercode `FORBIDDEN`
+|409 |BR-AUS-06 (bereits verlängert), BR-AUS-07 (Vormerkung/überfällig) |Fehlercode `EXTENSION_NOT_ALLOWED`
+|===
+
+*EARS*:
+* While eine Ausleihe noch nicht verlängert wurde und weder überfällig ist noch eine Vormerkung ihrer Kategorie vorliegt, shall das System eine Verlängerungsanfrage mit Status 200 gewähren.
+* If die Rolle `mitglied` eine Verlängerung für eine Ausleihe anfragt, die einem anderen Mitglied gehört, shall das System die Anfrage mit Status 403 ablehnen (BR-AUS-08).
+
+NOTE: Wie schon bei `X-Rolle` (PRD "Authentifizierung") wird auch `X-Mitglied-Id` unauthentifiziert entgegengenommen — die Prüfung schließt nur die Lücke aus Risiko R-01, dass ohne jede Objektzuordnung *jede* fremde Ausleihe verlängerbar wäre, ersetzt aber keine echte Authentifizierung.
+
+=== SUC-03: `POST /gegenstaende/{id}/ruecknahme` (→ UC-03)
+
+[cols="1,4"]
+|===
+|Input |`{ "auffaelligkeit": string \| null }`, Header `X-Rolle: thekendienst`
+|Validierung |`id` ist aktuell ausgeliehen.
+|===
+
+[cols="1,1,3"]
+|===
+|Status |Bedingung |Body
+
+|200 |Rücknahme erfolgreich |Gegenstand-Ressource, Zustand `in_pruefung`
+|404 |`id` unbekannt oder nicht ausgeliehen |Fehlercode `NOT_FOUND`
+|===
+
+*EARS*: When eine Rücknahme eintrifft, shall das System den Gegenstand in den Zustand `in_pruefung` versetzen, ohne die Ausleihe abzuschließen (BR-RP-01).
+
+=== SUC-04: `GET /gegenstaende/{id}` (→ UC-08)
+
+[cols="1,4"]
+|===
+|Input |keiner
+|Validierung |`id` existiert.
+|===
+
+[cols="1,1,3"]
+|===
+|Status |Bedingung |Body
+
+|200 |gefunden |Zustand, Kategorie, ggf. Rückgabefrist, ggf. Reservierungsinhaber
+|404 |nicht gefunden |Fehlercode `NOT_FOUND`
+|===
+
+=== SUC-05: `GET /kategorien/{id}/verfuegbarkeit` (→ UC-08)
+
+[cols="1,4"]
+|===
+|Input |keiner
+|Validierung |`id` existiert.
+|===
+
+[cols="1,1,3"]
+|===
+|Status |Bedingung |Body
+
+|200 |gefunden |Anzahl verfügbarer Gegenstände, Länge der Warteschlange
+|404 |nicht gefunden |Fehlercode `NOT_FOUND`
+|===
+
+*Qualitätsziel*: Antwort unter 300 ms (95. Perzentil, 100 Aufrufe) bei 400 Gegenständen/800 Mitgliedern, siehe PRD "Qualitätsziele".
+
+=== SUC-06: `POST /mitglieder/{id}/einweisungen` (→ UC-01, Vorbedingung von BR-AUS-04)
+
+[cols="1,4"]
+|===
+|Input |`{ "kategorieId": string }`
+|Validierung |`id` (Mitglied) existiert, `kategorieId` existiert (BR-MIT-02).
+|===
+
+*Verarbeitung*: Legt eine Einweisung mit dem heutigen Datum für (Mitglied, Kategorie) an.
+
+[cols="1,1,3"]
+|===
+|Status |Bedingung |Body
+
+|201 |Einweisung erfolgreich angelegt |Einweisung-Ressource
+|404 |Mitglied `id` oder `kategorieId` unbekannt |Fehlercode `NOT_FOUND`
+|===
+
+*EARS*: When ein Einweisung-Request mit existierendem Mitglied und existierender Kategorie eintrifft, shall das System die Einweisung anlegen und mit Status 201 bestätigen.
+
+=== SUC-06: `POST /kategorien/{id}/vormerkungen` (→ UC-07)
+
+[cols="1,4"]
+|===
+|Input |`{ "mitgliedId": string }`, Header `X-Rolle: mitglied` oder `thekendienst`
+|Validierung |`id` und `mitgliedId` existieren.
+|===
+
+[cols="1,1,3"]
+|===
+|Status |Bedingung |Body
+
+|201 |Vormerkung angelegt |Warteschlangenposition (BR-VM-01, BR-VM-02)
+|404 |`id` oder `mitgliedId` unbekannt |Fehlercode `NOT_FOUND`
+|===
+
+*EARS*: When ein Mitglied eine Vormerkung für eine Kategorie anlegt, shall das System es unabhängig von einer bestehenden Sperre ans Ende der Warteschlange dieser Kategorie einreihen (BR-VM-08).
+
+== CLI (Rolle: Wart)
+
+=== SUC-07: `leihgut pruefung abschliessen --gegenstand <id> --ergebnis <unauffaellig|wartungsfaellig|verloren> [--abzug <euro>] --rolle wart` (→ UC-04)
+
+[cols="1,4"]
+|===
+|Input |Gegenstand-ID, Ergebnis, optionaler Abzug in Euro
+|Validierung |Gegenstand ist `in_pruefung` (BR-RP-03); Abzug ≤ hinterlegte Kaution (BR-KAU-02); `--rolle wart` erforderlich.
+|===
+
+[cols="1,1,3"]
+|===
+|Exit-Code |Bedingung |Ausgabe
+
+|0 |Prüfung abgeschlossen |Folgezustand, Kautionsbewegung, ggf. neue Reservierung
+|1 |Gegenstand nicht `in_pruefung`, Abzug &gt; Kaution, oder Rolle ≠ `wart` |Fehlermeldung mit Regelbezug
+|2 |Gegenstand-ID unbekannt |`Gegenstand nicht gefunden`
+|===
+
+*EARS*:
+* When der Wart eine Prüfung mit Ergebnis `verloren` abschließt, shall das System die volle Kaution einbehalten und den Gegenstand ausmustern (BR-KAU-03).
+* When der Nutzungszähler nach Abschluss das Wartungsintervall der Kategorie erreicht, shall das System den Gegenstand auf `wartungsfaellig` statt `verfuegbar` setzen (BR-WA-02).
+* If eine Vormerkung für die Kategorie vorliegt und der Gegenstand `verfuegbar` wird, shall das System ihn für das erste Warteschlangenmitglied reservieren (BR-VM-03, BR-NL-02).
+
+=== SUC-08: `leihgut wartung abschliessen --gegenstand <id> --rolle wart` (→ UC-05)
+
+[cols="1,4"]
+|===
+|Input |Gegenstand-ID
+|Validierung |Gegenstand ist `wartungsfaellig`; `--rolle wart` erforderlich.
+|===
+
+[cols="1,1,3"]
+|===
+|Exit-Code |Bedingung |Ausgabe
+
+|0 |Wartung abgeschlossen |Zustand `verfuegbar`, Nutzungszähler 0
+|1 |Gegenstand nicht `wartungsfaellig`, oder Rolle ≠ `wart` |Fehlermeldung
+|2 |Gegenstand-ID unbekannt |`Gegenstand nicht gefunden`
+|===
+
+=== SUC-09: `leihgut ausmustern --gegenstand <id> --rolle wart` (→ UC-06)
+
+[cols="1,4"]
+|===
+|Input |Gegenstand-ID
+|Validierung |`--rolle wart` erforderlich.
+|===
+
+[cols="1,1,3"]
+|===
+|Exit-Code |Bedingung |Ausgabe
+
+|0 |Gegenstand ausgemustert |Endzustand `ausgemustert`, Warteschlange unverändert (BR-VM-07)
+|1 |Rolle ≠ `wart` |Fehlermeldung
+|2 |Gegenstand-ID unbekannt |`Gegenstand nicht gefunden`
+|===

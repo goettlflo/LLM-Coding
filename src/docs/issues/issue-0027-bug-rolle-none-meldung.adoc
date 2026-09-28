@@ -1,0 +1,36 @@
+= Issue 0027: Bug — Fehlermeldung zeigt Python-Literal 'None' bei fehlendem X-Rolle-Header
+:issue-id: 0027
+:type: Bug
+:status: open
+:priority: Could
+:refs: SUC-01, SUC-02
+
+== Beschreibung
+
+Gefunden bei manuellen Tests der Ausleihen-API am 2026-09-28.
+
+Fehlt der Header `X-Rolle` bei `POST /gegenstaende/{id}/ausgabe` oder `POST /ausleihen/{id}/verlaengerung`, antwortet das System mit:
+
+[source,json]
+----
+403 FORBIDDEN
+{ "message": "Rolle 'None' ist für diese Aktion nicht erlaubt" }
+----
+
+Erwartet: Eine sprechende Meldung wie "Es wurde keine Rolle angegeben", statt der Python-`None`-Repräsentation, die ein internes Implementierungsdetail preisgibt.
+
+Ursache: `rolle_pruefen` (app/api/app.py) formatiert den rohen Header-Wert (`None` bei Fehlen) direkt in die Fehlermeldung.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given ein Request ohne X-Rolle-Header an einen rollenpflichtigen Endpunkt
+When das System die fehlende Rolle ablehnt
+Then enthält die Fehlermeldung keinen Python-Literalwert wie "None"
+----
+
+== Abhängigkeiten
+
+- 0007 (Ausgabe eines Gegenstands)
+- 0008 (Ausleihe verlängern)

@@ -1,0 +1,77 @@
+ifndef::imagesdir[:imagesdir: ../images]
+:jbake-menu: -
+// header file for arc42-template,
+// including all help texts
+//
+// ====================================
+
+
+// configure DE settings for asciidoc
+include::chapters/config.adoc[]
+
+= Leihgut — Werkzeugverleih einer Bibliothek der Dinge — Architektur
+:revnumber: 1.0
+:revdate: 2026-09-28
+:revremark: arc42-Architekturdokumentation
+// toc-title definition MUST follow document title without blank line!
+:toc-title: Inhaltsverzeichnis
+
+//additional style for arc42 help callouts
+
+
+
+include::chapters/about-arc42.adoc[]
+
+// horizontal line
+***
+
+// numbering from here on
+:numbered:
+
+<<<<
+// 1. Anforderungen und Ziele
+include::chapters/01_introduction_and_goals.adoc[]
+
+<<<<
+// 2. Randbedingungen
+include::chapters/02_architecture_constraints.adoc[]
+
+<<<<
+// 3. Kontextabgrenzung
+include::chapters/03_context_and_scope.adoc[]
+
+<<<<
+// 4. Lösungsstrategie
+include::chapters/04_solution_strategy.adoc[]
+
+<<<<
+// 5. Bausteinsicht
+include::chapters/05_building_block_view.adoc[]
+
+<<<<
+// 6. Laufzeitsicht
+include::chapters/06_runtime_view.adoc[]
+
+<<<<
+// 7. Verteilungssicht
+include::chapters/07_deployment_view.adoc[]
+
+<<<<
+// 8. Querschnittliche Konzepte
+include::chapters/08_concepts.adoc[]
+
+<<<<
+// 9. Entscheidungen
+include::chapters/09_architecture_decisions.adoc[]
+
+<<<<
+// 10. Qualitätsanforderungen
+include::chapters/10_quality_requirements.adoc[]
+
+<<<<
+// 11. Risiken
+include::chapters/11_technical_risks.adoc[]
+
+<<<<
+// 12. Glossar
+include::chapters/12_glossary.adoc[]

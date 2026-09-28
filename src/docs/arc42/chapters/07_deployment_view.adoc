@@ -1,0 +1,44 @@
+:jbake-title: Verteilungssicht
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 7
+:filename: /chapters/07_deployment_view.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-deployment-view]]
+== Verteilungssicht
+
+=== Infrastruktur Ebene 1
+
+[plantuml]
+----
+@startuml
+!include <C4/C4_Deployment>
+Deployment_Node(rechner, "Vereinsrechner (Theke)", "lokal, ein Prozess") {
+  Deployment_Node(prozess, "Python-Prozess") {
+    Container(rest, "REST-API", "FastAPI")
+    Container(cli, "CLI", "Typer")
+  }
+  Deployment_Node(dateisystem, "Dateisystem") {
+    ContainerDb(db, "leihgut.sqlite3", "SQLite-Datei")
+  }
+}
+Rel(rest, db, "liest/schreibt")
+Rel(cli, db, "liest/schreibt")
+@enduml
+----
+
+Begründung:: Ein Prozess, lokal startbar, ohne externe Dienste (PRD "Betrieb") — kein Cluster, kein separater DB-Server, keine Cloud.
+
+Qualitäts- und/oder Leistungsmerkmale:: SQLite genügt für 400 Gegenstände/800 Mitglieder bei < 300 ms Antwortzeit (Qualitätsziel 4, Kapitel 1.2).
+
+Zuordnung von Bausteinen zu Infrastruktur:: REST-API und CLI laufen im selben Python-Prozess und teilen sich dieselbe SQLite-Datei; kein Baustein liegt auf einem separaten Knoten.
+
+=== Infrastruktur Ebene 2
+
+Nicht erforderlich — ein einzelner Knoten mit einem Prozess ist für Release 1 die gesamte Infrastruktur (siehe Kapitel 2, Randbedingung "Betrieb").

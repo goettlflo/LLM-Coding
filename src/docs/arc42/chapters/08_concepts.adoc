@@ -1,0 +1,88 @@
+:jbake-title: Querschnittliche Konzepte
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 8
+:filename: /chapters/08_concepts.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-concepts]]
+== Querschnittliche Konzepte
+
+Fünf Basiskonzepte, in dieser Reihenfolge (siehe AGENTS.md "Crosscutting Concepts").
+
+=== 8.1 Threat Model
+
+STRIDE, angewendet auf die Container aus Kapitel 5.
+
+[cols="1,1,3,2"]
+|===
+|ID |Kategorie |Bedrohung |Betroffener Baustein
+
+|T-001 |Tampering |Manipulierter `X-Rolle`-Header/`--rolle`-Flag täuscht eine höhere Berechtigung vor (z. B. Mitglied gibt sich als Wart aus). |REST-API, CLI (PRD "Authentifizierung")
+|T-002 |Spoofing |Kein echtes Login — jede Anfrage kann eine beliebige Mitglieds-/Wart-Identität behaupten. |REST-API, CLI
+|T-003 |Repudiation |Ohne Audit-Log könnte ein Kautionsabzug im Nachhinein bestritten werden. |AuditService
+|T-004 |Tampering |Zwei gleichzeitige Schreibzugriffe umgehen Geschäftsregeln, wenn Atomarität fehlt (BR-NL-01/02). |Repositories, SQLite
+|T-005 |Information Disclosure |SQLite-Datei ist eine gewöhnliche Datei im Dateisystem — Zugriff durch Dritte auf demselben Rechner offenbart alle Kautionsdaten. |SQLite-Datei
+|T-006 |Denial of Service |Kein Rate-Limiting auf der REST-API — eine Endlosschleife von Anfragen kann den einzigen Prozess blockieren. |REST-API
+|===
+
+=== 8.2 Security
+
+[cols="1,3,1"]
+|===
+|Mitigation |Beschreibung |Schließt
+
+|Rollenprüfung im Service |Jede Service-Methode verlangt die Rolle explizit als Parameter (ADR-0003) statt implizit aus dem Web-Kontext — verhindert zumindest fehlende Prüfung, nicht Fälschung. |T-001 (teilweise)
+|Dokumentiertes Risiko statt Schein-Sicherheit |PRD und Kapitel 11 (R-01) benennen den fehlenden Login offen; kein Feature täuscht Sicherheit vor, die nicht besteht. |T-001, T-002
+|Audit-Log unveränderlich (append-only) |Kautionsbewegungen und Zustandswechsel werden nur eingefügt, nie verändert oder gelöscht. |T-003
+|Optimistisches Locking (ADR-0006) |Transaktionale Versionsprüfung verhindert, dass zwei gleichzeitige Schreiber dieselbe Regel unterschiedlich anwenden. |T-004
+|Dateisystem-Berechtigungen der SQLite-Datei |Zugriffsrechte auf `leihgut.sqlite3` auf den Prozess-Benutzer beschränken (Betriebsdokumentation). |T-005
+|Kein eingebautes Rate-Limiting in Release 1 |Bewusst nicht behandelt — Umfang ist ein Vereinsrechner mit einer Theke, kein öffentliches Internet (siehe Kapitel 11, technische Schuld). |T-006 (offen)
+|===
+
+=== 8.3 Test
+
+Testpyramide, jeder Test referenziert eine UC-ID (Definition of Done, `prd.adoc`) und/oder eine BR-ID (`geschaeftsregeln.adoc`).
+
+[cols="1,3"]
+|===
+|Ebene |Inhalt
+
+|Unit |Service-Methoden gegen Fake-Repositories: eine Testklasse je Service, ein Test je Erweiterung/Extension aus `use-cases.adoc` (z. B. `test_ausgabe_abgelehnt_bei_sperre` → UC-01, BR-AUS-03).
+|Komponente |Repository-Tests gegen eine echte, temporäre SQLite-Datei: prüfen `schema.sql`, optimistisches Locking (BR-NL-01/02).
+|System |REST-/CLI-Aufrufe Ende-zu-Ende gegen den laufenden Prozess: ein Test je System Use Case (SUC-01..09), prüft Status-Codes/Exit-Codes aus `system-use-cases.adoc`.
+|Invarianten |Property-based Tests für Kautionsberechnung (BR-KAT-04): für jeden Wiederbeschaffungswert zwischen 0 und 10 000 Euro gilt 5 ≤ Kaution ≤ 100 und Kaution = round(0.2 × Wert) innerhalb der Deckelung.
+|===
+
+Jedes Gherkin-Szenario aus `geschaeftsregeln.adoc` entspricht mindestens einem automatisierten Test dieser Pyramide.
+
+=== 8.4 Observability
+
+[cols="1,3"]
+|===
+|Mechanismus |Beschreibung
+
+|Audit-Log |Eigene Tabelle `audit_log`: jede Zustandsänderung (Gegenstand, Ausleihe, Mitglied) und jede Kautionsbewegung erzeugt einen Eintrag mit Zeitstempel, Betrag/Zustand, Auslöser (BR-KAU-04). Trägt Qualitätsziel 3.
+|Anwendungs-Log |Strukturierte Logs (JSON) pro Request/CLI-Aufruf: SUC-ID, Rolle, Ergebnis (Status-Code/Exit-Code), Dauer.
+|Metriken |Antwortzeit je REST-Endpunkt (Histogramm) zur Prüfung des Qualitätsziels "Antwortzeit" (< 300 ms, 95. Perzentil).
+|Kein externes Monitoring |Bewusst nicht vorgesehen (PRD "ohne externe Dienste") — Logs bleiben lokale Dateien.
+|===
+
+=== 8.5 Error Handling
+
+[cols="1,3"]
+|===
+|Konzept |Anwendung im Leihgut-System
+
+|Fallback |Bei Versionskonflikt (BR-NL-01/02) kein Retry durch das System — die Ablehnung (409/Exit-Code 1) ist eine gültige fachliche Antwort, keine Störung (ADR-0006).
+|Retry |Kein automatischer Retry vorgesehen: alle Schreiboperationen sind so kurz, dass ein manueller erneuter Versuch durch Thekendienst/Wart ausreicht.
+|Circuit Breaker |Entfällt — keine externen Abhängigkeiten (PRD "ohne externe Dienste"), es gibt nichts, dessen Ausfall isoliert werden müsste.
+|Wiederherstellung nach Absturz |SQLite-Transaktionen sind ACID: ein abgebrochener Prozess hinterlässt keine halb geschriebene Ausleihe/Kaution. Neustart liest den letzten konsistenten Zustand.
+|Fehlerantworten |Einheitliches Fehlerformat an REST-Grenze: `{ "code": "<FEHLERCODE>", "message": "<Text>" }`, Codes wie in `system-use-cases.adoc` (`NOT_FOUND`, `ITEM_NOT_AVAILABLE`, `MEMBER_LOCKED`, `FORBIDDEN`, `EXTENSION_NOT_ALLOWED`).
+|===
+

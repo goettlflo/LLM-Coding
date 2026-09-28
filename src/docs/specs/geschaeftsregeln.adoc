@@ -1,0 +1,385 @@
+= Spezifikation: Geschäftsregeln mit BR-IDs
+:toc: left
+:toclevels: 2
+:sectnums:
+:icons: font
+:revnumber: 2.0
+:revdate: 2026-09-28
+
+Dieses Dokument vergibt BR-IDs für alle Geschäftsregeln aus dem PRD (`prd.adoc`, Abschnitt "Geschäftsregeln"), zerlegt sie in atomare Regeln und deckt jede mit mindestens einem Gherkin-Szenario ab.
+Die fachliche Formulierung bleibt im PRD; hier folgt die Zerlegung und Zuordnung zu Use Cases (siehe `use-cases.adoc`).
+
+== Katalog
+
+[cols="1,4"]
+|===
+|BR-KAT-01 |Jeder Gegenstand hat eine eindeutige Inventarnummer und gehört zu genau einer Kategorie.
+|BR-KAT-02 |Die Kategorie bestimmt Leihdauer (Tage), Wartungsintervall (Ausleihen) und Einweisungspflicht.
+|BR-KAT-03 |Jeder Gegenstand hat einen Wiederbeschaffungswert in Euro.
+|BR-KAT-04 |Die Kaution beträgt 20 % des Wiederbeschaffungswerts, kaufmännisch gerundet auf ganze Euro, mindestens 5 und höchstens 100 Euro.
+|BR-KAT-05 |Der Name einer Kategorie ist ein Pflichtfeld und darf nicht leer sein.
+|===
+
+[source,gherkin]
+----
+# BR-KAT-04
+Szenario: Kautionsberechnung wird auf die Grenzwerte gedeckelt
+  Wenn ein Gegenstand einen Wiederbeschaffungswert hat, dessen 20 Prozent unter 5 Euro liegen
+  Dann beträgt die Kaution 5 Euro
+
+  Wenn ein Gegenstand einen Wiederbeschaffungswert hat, dessen 20 Prozent über 100 Euro liegen
+  Dann beträgt die Kaution 100 Euro
+
+  Wenn 20 Prozent des Wiederbeschaffungswerts auf einen halben Euro fallen
+  Dann wird kaufmännisch auf den nächsten vollen Euro gerundet
+----
+
+== Ausleihe
+
+[cols="1,4"]
+|===
+|BR-AUS-01 |Ein Gegenstand wird nur ausgegeben, wenn er verfügbar oder für dieses Mitglied reserviert ist.
+|BR-AUS-02 |Ein Mitglied darf höchstens drei Ausleihen gleichzeitig führen. Vormerkungen zählen nicht mit.
+|BR-AUS-03 |Ein gesperrtes Mitglied leiht nicht aus.
+|BR-AUS-04 |Ein einweisungspflichtiger Gegenstand geht nur an ein Mitglied mit dokumentierter Einweisung für diese Kategorie.
+|BR-AUS-05 |Mit der Ausgabe wird die Kaution hinterlegt und die Rückgabefrist gesetzt: Ausgabedatum plus Leihdauer der Kategorie.
+|BR-AUS-06 |Eine Verlängerung um die volle Leihdauer ist einmal je Ausleihe möglich.
+|BR-AUS-07 |Eine Verlängerung ist ausgeschlossen, wenn für die Kategorie eine Vormerkung offen ist oder die Ausleihe bereits überfällig ist.
+|BR-AUS-08 |Eine Verlängerung darf nur vom Mitglied angefragt werden, dem die Ausleihe gehört, oder vom Thekendienst. Andernfalls wird die Verlängerung abgelehnt.
+|===
+
+[source,gherkin]
+----
+# BR-AUS-01
+Szenario: Ausgabe eines nicht verfügbaren Gegenstands wird abgelehnt
+  Angenommen ein Gegenstand ist weder verfügbar noch für das anfragende Mitglied reserviert
+  Wenn die Theke die Ausgabe anstößt
+  Dann wird die Ausgabe abgelehnt
+
+# BR-AUS-02
+Szenario: Vierte gleichzeitige Ausleihe wird abgelehnt
+  Angenommen ein Mitglied führt drei gleichzeitige Ausleihen
+  Wenn dasselbe Mitglied einen vierten Gegenstand ausleihen will
+  Dann wird die Ausgabe abgelehnt
+  Und offene Vormerkungen dieses Mitglieds zählen dabei nicht mit
+
+# BR-AUS-03
+Szenario: Gesperrtes Mitglied leiht nicht aus
+  Angenommen ein Mitglied ist gesperrt
+  Wenn es einen verfügbaren Gegenstand ausleihen will
+  Dann wird die Ausgabe abgelehnt
+
+# BR-AUS-04
+Szenario: Einweisungspflichtiger Gegenstand ohne Einweisung wird nicht ausgegeben
+  Angenommen ein Gegenstand gehört zu einer einweisungspflichtigen Kategorie
+  Und das anfragende Mitglied hat keine dokumentierte Einweisung für diese Kategorie
+  Wenn die Theke die Ausgabe anstößt
+  Dann wird die Ausgabe abgelehnt
+
+# BR-AUS-05
+Szenario: Ausgabe hinterlegt Kaution und setzt Rückgabefrist
+  Angenommen ein Gegenstand einer Kategorie mit 14 Tagen Leihdauer wird ausgegeben
+  Wenn die Ausgabe am 1. eines Monats erfolgt
+  Dann wird die Kaution der Kategorie hinterlegt
+  Und die Rückgabefrist wird auf den 15. desselben Monats gesetzt
+
+# BR-AUS-06
+Szenario: Einmalige Verlängerung um die volle Leihdauer
+  Angenommen eine Ausleihe wurde noch nicht verlängert
+  Wenn das Mitglied die Verlängerung anfragt
+  Dann wird die Rückgabefrist um die volle Leihdauer der Kategorie verschoben
+
+Szenario: Zweite Verlängerung derselben Ausleihe wird abgelehnt
+  Angenommen eine Ausleihe wurde bereits einmal verlängert
+  Wenn das Mitglied erneut verlängern will
+  Dann wird die Verlängerung abgelehnt
+
+# BR-AUS-07
+Szenario: Verlängerung bei offener Vormerkung wird abgelehnt
+  Angenommen für die Kategorie des ausgeliehenen Gegenstands liegt eine Vormerkung vor
+  Wenn das Mitglied verlängern will
+  Dann wird die Verlängerung abgelehnt
+
+Szenario: Verlängerung einer überfälligen Ausleihe wird abgelehnt
+  Angenommen eine Ausleihe ist bereits überfällig
+  Wenn das Mitglied verlängern will
+  Dann wird die Verlängerung abgelehnt
+
+# BR-AUS-08
+Szenario: Verlängerung durch ein fremdes Mitglied wird abgelehnt
+  Angenommen eine Ausleihe gehört Mitglied A
+  Wenn Mitglied B die Verlängerung dieser Ausleihe anfragt
+  Dann wird die Verlängerung abgelehnt
+
+Szenario: Thekendienst darf jede Ausleihe verlängern
+  Angenommen eine Ausleihe gehört Mitglied A
+  Wenn der Thekendienst die Verlängerung dieser Ausleihe anfragt
+  Dann wird die Verlängerung geprüft wie bei Mitglied A selbst
+----
+
+== Mitglied
+
+[cols="1,4"]
+|===
+|BR-MIT-01 |Der Name eines Mitglieds ist ein Pflichtfeld und darf nicht leer sein.
+|BR-MIT-02 |Eine Einweisung kann nur für eine existierende Kategorie erfasst werden.
+|===
+
+[source,gherkin]
+----
+# BR-MIT-01
+Szenario: Mitglied ohne Namen wird nicht angelegt
+  Wenn ein Mitglied mit leerem Namen angelegt werden soll
+  Dann wird die Anfrage abgelehnt
+
+# BR-MIT-02
+Szenario: Einweisung für unbekannte Kategorie wird abgelehnt
+  Angenommen eine kategorieId existiert nicht
+  Wenn für ein Mitglied eine Einweisung für diese kategorieId erfasst werden soll
+  Dann wird die Anfrage abgelehnt
+----
+
+== Rückgabe und Prüfung
+
+[cols="1,4"]
+|===
+|BR-RP-01 |Die Rückgabe an der Theke versetzt den Gegenstand in die Prüfung. Sie beendet die Ausleihe nicht.
+|BR-RP-02 |Die Theke erfasst bei der Rückgabe Auffälligkeiten, entscheidet aber nicht über die Kaution.
+|BR-RP-03 |Der Wart führt die Prüfung durch und erstellt ein Prüfprotokoll.
+|BR-RP-04 |Das Prüfprotokoll schließt die Ausleihe ab und legt den Kautionsabzug fest.
+|BR-RP-05 |Ein Schaden wird der laufenden Ausleihe zugerechnet, es sei denn, er ist im Prüfprotokoll einer früheren Ausleihe bereits vermerkt.
+|BR-RP-06 |Nach der Prüfung geht der Gegenstand in genau einen dieser Zustände: verfügbar, wartungsfällig oder ausgemustert.
+|===
+
+[source,gherkin]
+----
+# BR-RP-01
+Szenario: Rückgabe beendet die Ausleihe nicht
+  Angenommen eine Ausleihe ist aktiv
+  Wenn der Gegenstand an der Theke zurückgegeben wird
+  Dann wechselt der Gegenstand in den Zustand "in Prüfung"
+  Und die Ausleihe bleibt bis zum Prüfprotokoll offen
+
+# BR-RP-02
+Szenario: Theke entscheidet nicht über die Kaution
+  Angenommen die Theke erfasst bei der Rückgabe eine Auffälligkeit
+  Wenn die Rückgabe abgeschlossen wird
+  Dann bleibt die Kaution bis zum Prüfprotokoll unverändert hinterlegt
+
+# BR-RP-03
+Szenario: Nur der Wart erstellt das Prüfprotokoll
+  Angenommen ein Gegenstand ist in Prüfung
+  Wenn die Theke versucht, ein Prüfprotokoll zu erstellen
+  Dann wird der Versuch abgelehnt
+
+# BR-RP-04
+Szenario: Prüfprotokoll schließt Ausleihe ab
+  Angenommen ein Gegenstand ist in Prüfung
+  Wenn der Wart das Prüfprotokoll mit einem Kautionsabzug abschließt
+  Dann gilt die Ausleihe als abgeschlossen
+  Und der festgelegte Abzug wird auf die Kaution angewendet
+
+# BR-RP-05
+Szenario: Bereits vermerkter Schaden wird nicht erneut zugerechnet
+  Angenommen ein Schaden ist bereits im Prüfprotokoll einer früheren Ausleihe vermerkt
+  Wenn der Wart die aktuelle Prüfung abschließt
+  Dann wird dieser Schaden nicht der laufenden Ausleihe zugerechnet
+
+# BR-RP-06
+Szenario Grundriss: Prüfung endet in genau einem Folgezustand
+  Wenn der Wart die Prüfung mit Ergebnis "<ergebnis>" abschließt
+  Dann wechselt der Gegenstand in den Zustand "<zustand>"
+
+  Beispiele:
+    | ergebnis     | zustand         |
+    | unauffällig  | verfügbar       |
+    | wartungsfällig | wartungsfällig |
+    | verloren     | ausgemustert    |
+----
+
+== Kaution
+
+[cols="1,4"]
+|===
+|BR-KAU-01 |Die Kaution wird bei der Ausgabe hinterlegt und mit dem Prüfprotokoll ganz oder teilweise freigegeben.
+|BR-KAU-02 |Ein Abzug ist höchstens so hoch wie die hinterlegte Kaution.
+|BR-KAU-03 |Gilt ein Gegenstand als verloren, wird die Kaution vollständig einbehalten und der Gegenstand ausgemustert.
+|BR-KAU-04 |Jede Kautionsbewegung — Hinterlegung, Abzug, Freigabe — erzeugt einen Eintrag mit Zeitstempel, Betrag und Auslöser.
+|===
+
+[source,gherkin]
+----
+# BR-KAU-02
+Szenario: Abzug über der hinterlegten Kaution wird abgelehnt
+  Angenommen eine Kaution von 20 Euro ist hinterlegt
+  Wenn der Wart einen Abzug von 25 Euro festlegen will
+  Dann wird der Abzug abgelehnt
+
+# BR-KAU-03
+Szenario: Verlust behält die volle Kaution ein
+  Angenommen ein Gegenstand gilt als verloren
+  Wenn der Wart die Prüfung mit Ergebnis "verloren" abschließt
+  Dann wird die vollständige Kaution einbehalten
+  Und der Gegenstand wird ausgemustert
+
+# BR-KAU-04
+Szenario: Jede Kautionsbewegung wird protokolliert
+  Wenn eine Kaution hinterlegt, gemindert oder freigegeben wird
+  Dann entsteht ein Eintrag mit Zeitstempel, Betrag und Auslöser
+----
+
+== Wartung
+
+[cols="1,4"]
+|===
+|BR-WA-01 |Jede abgeschlossene Ausleihe erhöht den Nutzungszähler des Gegenstands um eins.
+|BR-WA-02 |Erreicht der Zähler das Wartungsintervall der Kategorie, wird der Gegenstand nach der Prüfung wartungsfällig statt verfügbar.
+|BR-WA-03 |Der Wart setzt einen wartungsfälligen Gegenstand nach erledigter Wartung auf verfügbar und den Nutzungszähler auf null.
+|BR-WA-04 |Ein wartungsfälliger Gegenstand wird nicht ausgegeben und nicht reserviert.
+|===
+
+[source,gherkin]
+----
+# BR-WA-02
+Szenario: Nutzungszähler erreicht Wartungsintervall
+  Angenommen der Nutzungszähler eines Gegenstands liegt einen unter dem Wartungsintervall seiner Kategorie
+  Wenn die laufende Ausleihe durch das Prüfprotokoll abgeschlossen wird
+  Dann wechselt der Gegenstand statt zu "verfügbar" in den Zustand "wartungsfällig"
+
+# BR-WA-03
+Szenario: Wartung setzt Zähler zurück
+  Angenommen ein Gegenstand ist wartungsfällig
+  Wenn der Wart die Wartung abschließt
+  Dann wechselt der Gegenstand in den Zustand "verfügbar"
+  Und der Nutzungszähler wird auf null gesetzt
+
+# BR-WA-04
+Szenario: Wartungsfälliger Gegenstand wird nicht ausgegeben
+  Angenommen ein Gegenstand ist wartungsfällig
+  Wenn die Theke die Ausgabe anstößt
+  Dann wird die Ausgabe abgelehnt
+----
+
+== Vormerkung
+
+[cols="1,4"]
+|===
+|BR-VM-01 |Eine Vormerkung gilt für eine Kategorie, nicht für einen einzelnen Gegenstand.
+|BR-VM-02 |Vormerkungen einer Kategorie bilden eine Warteschlange nach Eingangszeit.
+|BR-VM-03 |Wird ein Gegenstand nach der Prüfung verfügbar und liegt eine Vormerkung vor, wird er für das erste Mitglied der Warteschlange reserviert.
+|BR-VM-04 |Eine Reservierung verfällt drei Kalendertage nach dem nächsten auf ihre Entstehung folgenden Öffnungstag.
+|BR-VM-05 |Der Gegenstand geht nach Verfall der Reservierung an das nächste Mitglied der Warteschlange oder wird verfügbar.
+|BR-VM-06 |Wird ein Gegenstand nach der Prüfung wartungsfällig, bleibt die Warteschlange unverändert bestehen. Es entsteht keine Reservierung.
+|BR-VM-07 |Wird der letzte Gegenstand einer Kategorie ausgemustert, bleibt eine bestehende Warteschlange unverändert erhalten. Das System löst sie nicht auf und benachrichtigt niemanden.
+|BR-VM-08 |Ein gesperrtes Mitglied darf vormerken, aber nicht abholen. Eine für ein gesperrtes Mitglied entstehende Reservierung wird übersprungen; das Mitglied behält seinen Platz in der Warteschlange.
+|===
+
+[source,gherkin]
+----
+# BR-VM-03
+Szenario: Verfügbarer Gegenstand wird für erstes Warteschlangenmitglied reserviert
+  Angenommen für eine Kategorie liegt eine Vormerkung vor
+  Wenn ein Gegenstand dieser Kategorie nach der Prüfung verfügbar wird
+  Dann wird er für das erste Mitglied der Warteschlange reserviert
+
+# BR-VM-04
+Szenario: Reservierung entsteht an einem Tag ohne unmittelbar folgenden Öffnungstag
+  Angenommen ein Gegenstand wird nach der Prüfung am Mittwoch verfügbar
+  Und für seine Kategorie liegt eine Vormerkung vor
+  Wenn der Gegenstand für das erste Mitglied der Warteschlange reserviert wird
+  Dann beginnt die Verfallsfrist von drei Kalendertagen am folgenden Samstag
+  Und die Reservierung verfällt frühestens am darauffolgenden Dienstag
+
+Szenario: Reservierung entsteht am Öffnungstag selbst
+  Angenommen ein Gegenstand wird nach der Prüfung an einem Samstag verfügbar
+  Und für seine Kategorie liegt eine Vormerkung vor
+  Wenn der Gegenstand für das erste Mitglied der Warteschlange reserviert wird
+  Dann beginnt die Verfallsfrist von drei Kalendertagen am selben Samstag
+  Und die Reservierung verfällt am darauffolgenden Dienstag
+
+# BR-VM-05
+Szenario: Reservierung verfällt ungenutzt
+  Angenommen eine Reservierung hat ihre Verfallsfrist erreicht
+  Und das reservierte Mitglied ist nicht erschienen
+  Wenn der nächste Öffnungstag beginnt
+  Dann wird der Gegenstand an das nächste Mitglied der Warteschlange vergeben
+  Oder er wird verfügbar, wenn die Warteschlange leer ist
+
+# BR-VM-06
+Szenario: Wartungsfälliger Gegenstand erzeugt keine Reservierung
+  Angenommen für eine Kategorie liegt eine Vormerkung vor
+  Wenn ein Gegenstand dieser Kategorie nach der Prüfung wartungsfällig wird
+  Dann bleibt die Warteschlange unverändert
+  Und es entsteht keine Reservierung
+
+# BR-VM-07
+Szenario: Letzter Gegenstand einer Kategorie wird ausgemustert
+  Angenommen eine Kategorie hat genau einen Gegenstand
+  Und für diese Kategorie liegen zwei Vormerkungen in der Warteschlange vor
+  Wenn der Wart diesen Gegenstand nach der Prüfung ausmustert
+  Dann bleibt die Warteschlange mit beiden Vormerkungen unverändert bestehen
+  Und es entsteht keine Reservierung
+  Und es wird keine Benachrichtigung ausgelöst
+
+# BR-VM-08
+Szenario: Gesperrtes Mitglied behält Warteschlangenplatz
+  Angenommen das erste Mitglied der Warteschlange ist gesperrt
+  Wenn ein Gegenstand dieser Kategorie verfügbar wird
+  Dann wird die Reservierung für dieses Mitglied übersprungen
+  Und das Mitglied behält seinen Platz in der Warteschlange
+----
+
+== Sperre
+
+[cols="1,4"]
+|===
+|BR-SP-01 |Ein Mitglied ist gesperrt, sobald mindestens eine seiner Ausleihen überfällig ist.
+|BR-SP-02 |Überfällig heißt: Die Rückgabefrist liegt vor dem heutigen Datum und der Gegenstand ist nicht zurückgegeben.
+|BR-SP-03 |Die Sperre endet, wenn für alle überfälligen Ausleihen des Mitglieds die Prüfung abgeschlossen ist.
+|===
+
+[source,gherkin]
+----
+# BR-SP-01 / BR-SP-02
+Szenario: Mitglied wird durch Überfälligkeit gesperrt
+  Angenommen eine Ausleihe hat eine Rückgabefrist vor dem heutigen Datum
+  Und der Gegenstand ist nicht zurückgegeben
+  Wenn der heutige Tag beginnt
+  Dann gilt das Mitglied als gesperrt
+
+# BR-SP-03
+Szenario: Sperre endet erst mit abgeschlossener Prüfung
+  Angenommen ein gesperrtes Mitglied hat den überfälligen Gegenstand zurückgegeben
+  Und die Prüfung ist noch nicht abgeschlossen
+  Dann bleibt das Mitglied gesperrt
+
+  Wenn der Wart die Prüfung für alle überfälligen Ausleihen abschließt
+  Dann endet die Sperre
+----
+
+== Nebenläufigkeit
+
+[cols="1,4"]
+|===
+|BR-NL-01 |Die Ausgabe eines Gegenstands ist atomar: Prüfung der Ausgabebedingungen und Zuweisung an ein Mitglied erfolgen als eine unteilbare Operation. Treffen zwei Ausgabeversuche für denselben Gegenstand gleichzeitig ein, gelingt genau einer.
+|BR-NL-02 |Dieselbe Atomaritätsanforderung gilt für die Zuweisung einer Reservierung an das erste Mitglied der Warteschlange.
+|===
+
+[source,gherkin]
+----
+# BR-NL-01
+Szenario: Zwei gleichzeitige Ausgabeversuche für denselben Gegenstand
+  Angenommen ein Gegenstand ist verfügbar
+  Wenn zwei Thekendienste gleichzeitig eine Ausgabe dieses Gegenstands an unterschiedliche Mitglieder anstoßen
+  Dann gelingt genau einer der beiden Ausgabeversuche
+  Und der andere Versuch wird abgelehnt, als wäre der Gegenstand bereits ausgeliehen
+  Und es existiert am Ende genau eine aktive Ausleihe für diesen Gegenstand
+
+# BR-NL-02
+Szenario: Gegenstand wird gleichzeitig durch zwei Prüfungsabschlüsse verfügbar gemeldet
+  Angenommen für eine Kategorie liegt eine Vormerkung vor
+  Und zwei Gegenstände dieser Kategorie werden gleichzeitig nach ihrer jeweiligen Prüfung verfügbar
+  Wenn beide Verfügbarkeitsmeldungen gleichzeitig verarbeitet werden
+  Dann wird nur einer der beiden Gegenstände für das erste Mitglied der Warteschlange reserviert
+  Und der zweite Gegenstand bleibt verfügbar oder wird für das nächste Mitglied der Warteschlange reserviert
+----

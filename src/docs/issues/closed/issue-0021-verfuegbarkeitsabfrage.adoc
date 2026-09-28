@@ -1,0 +1,27 @@
+= Issue 0021: Verfügbarkeitsabfrage
+:issue-id: 0021
+:type: EPIC
+:status: closed
+:priority: Should
+:refs: UC-08
+
+== Beschreibung
+
+Lesender Zugriff für Mitglieder, um vor dem Theken-Besuch Status und Warteschlangenposition zu prüfen (Persona Sabine). Kein Kontrollfluss-kritisches Feature, daher Should statt Must.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given ein Gegenstand mit bekanntem Zustand
+When der Status abgefragt wird
+Then wird der aktuelle Zustand ohne Seiteneffekt zurückgegeben
+----
+
+== Enthaltene Stories
+
+- 0022 Gegenstand-/Kategorie-Status abfragen
+
+== Abhängigkeiten
+
+- 0016 (Vormerkung & Reservierung)

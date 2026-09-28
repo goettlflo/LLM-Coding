@@ -1,0 +1,31 @@
+= ADR-0006: Atomarität bei gleichzeitigem Zugriff
+Status: Akzeptiert
+
+== Kontext
+
+BR-NL-01: Zwei gleichzeitige Ausgabeversuche für denselben Gegenstand dürfen nicht beide gelingen.
+BR-NL-02: Dieselbe Anforderung gilt für die Zuweisung einer Reservierung.
+Persistenz ist SQLite in einem einzelnen Prozess (ADR-0002), Zugriff über raw `sqlite3` (ADR-0004).
+
+== Entscheidung
+
+Optimistisches Locking über eine Versions-Spalte auf den betroffenen Aggregaten (Gegenstand, Vormerkungs-Warteschlange).
+Eine Schreiboperation liest die aktuelle Version, führt die Geschäftsregelprüfung aus und schreibt nur, wenn `UPDATE ... WHERE id = ? AND version = ?` genau eine Zeile trifft. Trifft es keine Zeile, war ein anderer Schreibvorgang schneller — die Operation wird mit Konflikt abgebrochen (REST: 409, CLI: Exit-Code 1).
+
+== Pugh-Matrix (Baseline: SQLite `BEGIN IMMEDIATE`, exklusiver Lock)
+
+[cols="2,1,1,1"]
+|===
+|Kriterium |`BEGIN IMMEDIATE` (exklusiv) |Optimistisches Locking (Versions-Spalte) |In-Process-Mutex
+
+|Erfüllt BR-NL-01/02 |S (Baseline) |S |S
+|Durchsatz bei paralleler Lesenlast |- |+ |0
+|Funktioniert bei mehreren Prozessen/Workern |0 |+ |-
+|Implementierungsaufwand |+ |0 |0
+|===
+
+== Konsequenzen
+
+* Jedes betroffene Aggregat (Gegenstand, Warteschlange) erhält eine `version`-Spalte, die bei jedem erfolgreichen Schreiben um eins erhöht wird.
+* Ein Konflikt ist kein Serverfehler (5xx), sondern ein erwarteter, fachlich modellierter Fall — abgebildet in `system-use-cases.adoc` als 409/Exit-Code 1.
+* Diese Entscheidung ist unabhängig von einem künftigen Mehrprozess-Betrieb (aktuell nicht vorgesehen, PRD: "ein Prozess") — falls das sich ändert, bleibt die Versions-Spalte gültig, ein reiner In-Process-Mutex wäre dann hinfällig gewesen.

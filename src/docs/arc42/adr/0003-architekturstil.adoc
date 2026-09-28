@@ -1,0 +1,31 @@
+= ADR-0003: Architekturstil
+Status: Akzeptiert
+
+== Kontext
+
+AGENTS.md, Abschnitt "Layer Boundaries": An jeder Schichtgrenze nur DTOs, explizites Mapping, Dependency Inversion.
+Das System hat zwei Eingänge (REST, CLI), eine SQLite-Persistenz, keine weiteren externen Systeme (PRD: "ohne externe Dienste").
+Team-Vorgabe (Rückfrage 2026-09-28): klassische Schichtenarchitektur statt Hexagonal.
+
+== Entscheidung
+
+Klassische Schichtenarchitektur: Controller (REST) / CLI-Befehle → Service (Anwendungslogik, ein Service je Use-Case-Gruppe) → Repository (ein Repository je Aggregat) → SQLite.
+Die Service-Schicht enthält die Geschäftsregeln (BR-IDs) und bleibt unabhängig von FastAPI/Typer-spezifischen Typen; Controller und CLI-Befehle mappen explizit auf/von DTOs.
+
+== Pugh-Matrix (Baseline: Hexagonal/Ports & Adapters)
+
+[cols="2,1,1"]
+|===
+|Kriterium |Hexagonal (Ports & Adapters) |Klassische Schichtenarchitektur
+
+|Entkopplung von REST/CLI (zwei Eingänge) |S (Baseline) |0
+|Einfachheit für kleines Team/Scope |- |+
+|Testbarkeit der Service-Schicht ohne Web-Framework |S |0
+|Team-Vorgabe erfüllt |- |+
+|===
+
+== Konsequenzen
+
+* Zwei Eingänge (REST, CLI) rufen dieselbe Service-Schicht auf — Duplikation von Validierung wird vermieden, aber die Service-Schicht muss Rollenprüfung (`X-Rolle`/`--rolle`) als expliziten Parameter entgegennehmen, nicht implizit aus dem Web-Kontext lesen.
+* Repository-Schnittstellen (ein Interface je Aggregat: Gegenstand, Ausleihe, Kaution, Vormerkung, Reservierung, Mitglied) sind austauschbar für Tests (In-Memory-Fake statt SQLite).
+* Siehe Kapitel 5 (Bausteinsicht) der arc42-Doku für die Zuordnung von Services zu Use Cases.

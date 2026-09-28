@@ -1,0 +1,43 @@
+= Issue 0010: Gegenstand zurücknehmen
+:issue-id: 0010
+:type: Story
+:status: closed
+:priority: Must
+:refs: UC-03, BR-RP-01, BR-RP-02, SUC-03
+
+== Beschreibung
+
+RueckgabeService.zuruecknehmen(): versetzt den Gegenstand in den Zustand "in Prüfung", erfasst optionale Auffälligkeiten der Theke. Beendet die Ausleihe nicht und entscheidet nicht über die Kaution.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-RP-01
+Szenario: Rückgabe beendet die Ausleihe nicht
+  Angenommen eine Ausleihe ist aktiv
+  Wenn der Gegenstand an der Theke zurückgegeben wird
+  Dann wechselt der Gegenstand in den Zustand "in Prüfung"
+  Und die Ausleihe bleibt bis zum Prüfprotokoll offen
+
+# BR-RP-02
+Szenario: Theke entscheidet nicht über die Kaution
+  Angenommen die Theke erfasst bei der Rückgabe eine Auffälligkeit
+  Wenn die Rückgabe abgeschlossen wird
+  Dann bleibt die Kaution bis zum Prüfprotokoll unverändert hinterlegt
+----
+
+== Abhängigkeiten
+
+- 0007 (Ausgabe eines Gegenstands)
+
+== Analyse
+
+* Neuer Service `RueckgabeService.zuruecknehmen(gegenstand_id, auffaelligkeit=None)` (analog `AusleiheService`, ADR-0003: ein Service je fachlichem Vorgang).
+* Vorbedingung: `Gegenstand.zustand == "ausgeliehen"` (sonst `NotFoundError`/`ConflictError", SUC-03 liefert 404 bei unbekannt/nicht ausgeliehen).
+* Zustandswechsel `ausgeliehen -> in_pruefung` über `GegenstandRepository.zustand_wechseln_atomar` (bestehende Methode, kein neues Locking nötig).
+* Auffälligkeit wird nicht persistiert als eigenes Feld in dieser Story (kein Business Rule verlangt das für 0010) — an das Prüfprotokoll (Issue 0011) weitergereicht wird nur der Aufruf-Parameter; die Speicherung des vermerkten Schadens erfolgt im Prüfprotokoll selbst (siehe BR-RP-05 in Issue 0011). Für BR-RP-02 genügt, dass die Kaution unverändert bleibt (keine Kaution-Mutation in dieser Methode).
+* Ausleihe.status bleibt "aktiv" (BR-RP-01) — keine Änderung an `AusleiheRepository` nötig.
+* Neuer REST-Endpunkt `POST /gegenstaende/{id}/ruecknahme` (SUC-03), Rolle `thekendienst`, Request-DTO `{ auffaelligkeit: str | None }`, Response = Gegenstand-Ressource (200).
+* Neuer CLI-Befehl folgt SUC-Konvention, wird aber erst mit Issue 0011 (`pruefung abschliessen`) sinnvoll kombinierbar; für 0010 genügt der REST-Endpunkt (Thekendienst nutzt laut PRD die Weboberfläche/API, nicht die CLI).
+* Tests: `tests/test_rueckgabe_service.py` (neu) + Ergänzung in `tests/test_api.py`; TDD-Referenz BR-RP-01, BR-RP-02.

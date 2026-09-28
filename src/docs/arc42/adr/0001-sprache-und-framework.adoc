@@ -1,0 +1,30 @@
+= ADR-0001: Sprache und Framework
+Status: Akzeptiert
+
+== Kontext
+
+PRD, Abschnitt "Rahmenbedingungen": Sprache, Framework und Persistenz sind frei wählbar.
+Feste Randbedingungen: REST-API für alle Anwendungsfälle, zusätzlich eine CLI für den Wart, keine Web-Oberfläche, ein Prozess ohne externe Dienste.
+Team-Vorgabe (Rückfrage 2026-09-28): Python.
+
+== Entscheidung
+
+Python 3 mit FastAPI für die REST-API. Begründung: FastAPI erzeugt aus Type Hints automatisch Validierung und OpenAPI-Dokumentation, was die in `system-use-cases.adoc` festgelegten Statuscodes und Fehlerkörper direkt abbildet.
+
+== Pugh-Matrix (Baseline: Kotlin/Java mit Spring Boot)
+
+[cols="2,1,1,1"]
+|===
+|Kriterium |Kotlin/Java (Spring Boot) |TypeScript/Node (Fastify) |Python (FastAPI)
+
+|Typsicherheit |S (Baseline) |- |0
+|Testkultur (pytest/JUnit) |S |0 |0
+|Start-Overhead (Ein-Prozess-Betrieb) |- |+ |+
+|Team-Vorgabe erfüllt |- |- |+
+|===
+
+== Konsequenzen
+
+* Testframework: pytest (siehe Kapitel 8.3 der arc42-Doku).
+* Typsicherheit wird durch Type Hints und `mypy` in der CI ersetzt, nicht durch den Compiler erzwungen — Validierungsregeln aus `supplementary.adoc` müssen daher zusätzlich laufzeitgeprüft werden (FastAPI/Pydantic übernimmt das an der REST-Grenze).
+* CLI-Framework wird separat entschieden (ADR-0005).

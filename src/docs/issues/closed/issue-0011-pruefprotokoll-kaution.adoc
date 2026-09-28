@@ -1,0 +1,57 @@
+= Issue 0011: Prüfprotokoll abschließen mit Kautionsentscheidung
+:issue-id: 0011
+:type: Story
+:status: closed
+:priority: Must
+:refs: UC-04, BR-RP-03, BR-RP-04, BR-RP-05, BR-RP-06, BR-KAU-01, BR-KAU-02, BR-KAU-03, BR-KAU-04, SUC-07
+
+== Beschreibung
+
+RueckgabeService.pruefungAbschliessen(): nur der Wart erstellt das Prüfprotokoll, das die Ausleihe abschließt und den Kautionsabzug festlegt (gedeckelt auf die hinterlegte Kaution). Jede Kautionsbewegung wird protokolliert (Issue 0005).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-RP-03
+Szenario: Nur der Wart erstellt das Prüfprotokoll
+  Angenommen ein Gegenstand ist in Prüfung
+  Wenn die Theke versucht, ein Prüfprotokoll zu erstellen
+  Dann wird der Versuch abgelehnt
+
+# BR-KAU-02
+Szenario: Abzug über der hinterlegten Kaution wird abgelehnt
+  Angenommen eine Kaution von 20 Euro ist hinterlegt
+  Wenn der Wart einen Abzug von 25 Euro festlegen will
+  Dann wird der Abzug abgelehnt
+
+# BR-KAU-03
+Szenario: Verlust behält die volle Kaution ein
+  Angenommen ein Gegenstand gilt als verloren
+  Wenn der Wart die Prüfung mit Ergebnis "verloren" abschließt
+  Dann wird die vollständige Kaution einbehalten
+  Und der Gegenstand wird ausgemustert
+
+# BR-RP-05
+Szenario: Bereits vermerkter Schaden wird nicht erneut zugerechnet
+  Angenommen ein Schaden ist bereits im Prüfprotokoll einer früheren Ausleihe vermerkt
+  Wenn der Wart die aktuelle Prüfung abschließt
+  Dann wird dieser Schaden nicht der laufenden Ausleihe zugerechnet
+----
+
+== Abhängigkeiten
+
+- 0010 (Gegenstand zurücknehmen)
+- 0005 (Audit-Log-Infrastruktur)
+
+== Analyse
+
+* `RueckgabeService.pruefung_abschliessen(gegenstand_id, ergebnis, abzug=0, rolle="wart")` — `ergebnis` ∈ {unauffaellig, wartungsfaellig, verloren} (Story 0012 ergänzt die automatische Wartungsfälligkeits-Erkennung anhand des Nutzungszählers zusätzlich zum expliziten Ergebnis `wartungsfaellig`).
+* Vorbedingungen: Gegenstand ist `in_pruefung` (BR-RP-03, sonst `ConflictError`); Rolle == `wart` (sonst `ValidationError`/403, BR-RP-03); `abzug <= Kaution.betrag` (BR-KAU-02, sonst `ValidationError`).
+* Neue Tabelle `pruefprotokoll` (gegenstand_id, ausleihe_id, ergebnis, abzug, schaden_vermerkt, erstellt_am) für BR-RP-05 (bereits vermerkte Schäden über frühere Protokolle derselben `gegenstand_id` nachschlagen, nicht der aktuellen Ausleihe erneut zurechnen).
+* Kaution: `KautionRepository` erhält `abzug_anwenden(kaution_id, abzug)` das Status auf `teilweise_freigegeben`/`freigegeben`/`einbehalten` setzt; jede Bewegung protokolliert `AuditService.protokollieren("kaution_bewegung", ...)` (BR-KAU-04).
+* `AusleiheRepository` erhält `abschliessen(ausleihe_id)` (status -> `abgeschlossen`, BR-RP-04).
+* Ergebnis `verloren`: volle Kaution einbehalten + Gegenstand -> `ausgemustert` (BR-KAU-03), unabhängig vom Wartungszähler.
+* Ergebnis `unauffaellig`/`wartungsfaellig` ohne Verlust: Folgezustand über Issue 0012 (Nutzungszähler) bestimmt — 0011 liefert dafür den Grundmechanismus (Zustandswechsel `in_pruefung -> verfuegbar`), 0012 überschreibt ihn bei erreichtem Wartungsintervall.
+* REST folgt hier nicht (SUC-07 ist CLI, Rolle Wart) — neuer Typer-Befehl `leihgut pruefung abschliessen --gegenstand <id> --ergebnis <..> [--abzug <euro>] --rolle wart` in `app/cli/main.py`.
+* Tests: TDD-Referenz BR-RP-03, BR-RP-04, BR-RP-05, BR-KAU-01..04; CLI-Test in `tests/test_cli.py`.

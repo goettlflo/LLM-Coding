@@ -1,0 +1,34 @@
+= Issue 0012: Nutzungszähler und Wartungsfälligkeit
+:issue-id: 0012
+:type: Story
+:status: closed
+:priority: Must
+:refs: BR-WA-01, BR-WA-02
+
+== Beschreibung
+
+Teil des Prüfungsabschlusses (Issue 0011): jede abgeschlossene Ausleihe erhöht den Nutzungszähler; erreicht er das Wartungsintervall der Kategorie, wird der Gegenstand statt "verfügbar" auf "wartungsfällig" gesetzt.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-WA-02
+Szenario: Nutzungszähler erreicht Wartungsintervall
+  Angenommen der Nutzungszähler eines Gegenstands liegt einen unter dem Wartungsintervall seiner Kategorie
+  Wenn die laufende Ausleihe durch das Prüfprotokoll abgeschlossen wird
+  Dann wechselt der Gegenstand statt zu "verfügbar" in den Zustand "wartungsfällig"
+----
+
+== Abhängigkeiten
+
+- 0011 (Prüfprotokoll abschließen mit Kautionsentscheidung)
+
+== Analyse
+
+* Erweitert `RueckgabeService.pruefung_abschliessen` (Issue 0011) um Schritt: bei Ergebnis `unauffaellig` Nutzungszähler `+1` (BR-WA-01) über neue `GegenstandRepository.nutzungszaehler_erhoehen(gegenstand_id)` (analog zum bestehenden atomaren Zustandswechsel, kein zusätzliches Locking nötig, da im selben Request sequenziell nach dem Zustandswechsel `in_pruefung`).
+* Nach Erhöhung: `neuer_zaehler >= Kategorie.wartungsintervall` → Folgezustand `wartungsfaellig` statt `verfuegbar` (BR-WA-02); sonst `verfuegbar`.
+* Ergebnis `verloren` (BR-KAU-03) hat Vorrang und setzt unabhängig vom Zähler `ausgemustert` — keine Zähler-Erhöhung nötig, da Gegenstand ausscheidet.
+* Ergebnis `wartungsfaellig` (explizit vom Wart gemeldet, z. B. sichtbarer Defekt unabhängig vom Zähler) setzt direkt `wartungsfaellig`, ohne den Zähler zu prüfen — beide Wege (Zähler-Schwelle und explizite Wart-Meldung) münden im selben Zustand.
+* Kein neuer Endpunkt; reine Erweiterung der Logik aus 0011 in derselben Methode/demselben Commit-Schritt.
+* Tests: TDD-Referenz BR-WA-01, BR-WA-02 in `tests/test_rueckgabe_service.py`.

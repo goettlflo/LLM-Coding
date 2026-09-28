@@ -1,0 +1,39 @@
+= Issue 0024: Bug — Verlängerung ohne Prüfung der Mitglieds-Identität (Broken Object Level Authorization)
+:issue-id: 0024
+:type: Bug
+:status: open
+:priority: Must
+:refs: UC-02, SUC-02, BR-AUS-06, BR-AUS-07, BR-AUS-08
+
+== Beschreibung
+
+Gefunden bei manuellen Tests der Ausleihen-API am 2026-09-28.
+
+`POST /ausleihen/{ausleihe_id}/verlaengerung` verlängert jede syntaktisch gültige `ausleihe_id`, solange nur der Header `X-Rolle: mitglied` gesetzt ist — unabhängig davon, welchem Mitglied die Ausleihe tatsächlich gehört. Es wird keine Mitglieds-ID im Request mitgegeben oder mit dem Eigentümer der Ausleihe abgeglichen.
+
+Erwartet: Ein Mitglied sollte nur eigene Ausleihen verlängern können (UC-02: "Ein Mitglied möchte die Rückgabefrist einer laufenden Ausleihe verschieben").
+
+Auswirkung: Da `X-Rolle` clientseitig frei wählbar ist (dokumentiertes Risiko R-01, keine echte Authentifizierung in Release 1), kann jeder Aufrufer mit `X-Rolle: mitglied` beliebige fremde Ausleihen verlängern. Das ist Broken Object Level Authorization (OWASP API Security Top 10, API1:2023) und geht über das bereits dokumentierte Risiko R-01 hinaus: selbst bei korrekt behaupteter Rolle fehlt die Objektzugehörigkeitsprüfung.
+
+Ursache: `AusleiheService.verlaengern` (app/services/ausleihe_service.py) nimmt keine Mitglieds-ID entgegen und prüft daher keine Eigentümerschaft; `system-use-cases.adoc` SUC-02 sieht ebenfalls keine entsprechende Prüfung vor.
+
+Fix-Vorschlag: Anfragende Mitglieds-ID (z. B. zusätzlicher Header oder Body-Feld) an `verlaengern` übergeben und mit `ausleihe.mitglied_id` abgleichen, außer die Rolle ist `thekendienst`.
+
+Spec-Nachtrag (2026-09-28): BR-AUS-08 in geschaeftsregeln.adoc ergänzt, SUC-02 in system-use-cases.adoc um Header `X-Mitglied-Id` und Status 403 erweitert.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given eine aktive Ausleihe von Mitglied A
+When Mitglied B mit X-Rolle: mitglied die Verlängerung dieser Ausleihe anfragt
+Then wird die Verlängerung abgelehnt (403 oder 404, nicht 200)
+
+Given eine aktive Ausleihe von Mitglied A
+When Mitglied A mit X-Rolle: mitglied die Verlängerung dieser Ausleihe anfragt
+Then wird die Verlängerung gewährt
+----
+
+== Abhängigkeiten
+
+- 0008 (Ausleihe verlängern)

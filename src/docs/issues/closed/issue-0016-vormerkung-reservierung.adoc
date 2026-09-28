@@ -1,0 +1,28 @@
+= Issue 0016: Vormerkung & Reservierung
+:issue-id: 0016
+:type: EPIC
+:status: closed
+:priority: Must
+:refs: UC-07
+
+== Beschreibung
+
+Mitglieder merken Kategorien vor; wird ein Gegenstand dieser Kategorie verfügbar, geht er automatisch und atomar an das erste Warteschlangenmitglied — mit Verfall der Reservierung nach Öffnungstagen. Kernanliegen von Sabine (Mitglied, PRD Persona).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given eine Vormerkung für eine Kategorie ohne verfügbaren Gegenstand
+When ein Gegenstand dieser Kategorie nach der Prüfung verfügbar wird
+Then wird er für das erste Mitglied der Warteschlange reserviert
+----
+
+== Enthaltene Stories
+
+- 0017 Kategorie vormerken
+- 0018 Automatische Reservierungszuteilung
+
+== Abhängigkeiten
+
+- 0009 (Rückgabe & Prüfung)

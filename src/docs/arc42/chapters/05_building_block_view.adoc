@@ -1,0 +1,75 @@
+:jbake-title: Bausteinsicht
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 5
+:filename: /chapters/05_building_block_view.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-building-block-view]]
+== Bausteinsicht
+
+Die Bausteinsicht zeigt Container und Komponenten sowie deren Zuordnung zu Use Cases (UC-IDs) und Geschäftsregeln (BR-IDs).
+
+=== Whitebox Gesamtsystem (Ebene 1)
+
+[plantuml]
+----
+@startuml
+!include <C4/C4_Container>
+Person(thekendienst, "Thekendienst")
+Person(mitglied, "Mitglied")
+Person(wart, "Wart")
+System_Boundary(leihgut, "Leihgut-System") {
+  Container(rest, "REST-API", "FastAPI", "SUC-01..06")
+  Container(cli, "CLI", "Typer", "SUC-07..09, nur Wart")
+  Container(service, "Service-Schicht", "Python", "Geschaeftsregeln BR-*, UC-01..08")
+  Container(repo, "Repositories", "Python/sqlite3", "ein Repository je Aggregat")
+  ContainerDb(db, "SQLite-Datei", "SQLite", "Gegenstand, Ausleihe, Kaution, Vormerkung, Reservierung, Mitglied, Audit-Log")
+}
+Rel(thekendienst, rest, "HTTPS/JSON")
+Rel(mitglied, rest, "HTTPS/JSON")
+Rel(wart, rest, "HTTPS/JSON")
+Rel(wart, cli, "Terminal")
+Rel(rest, service, "ruft auf")
+Rel(cli, service, "ruft auf")
+Rel(service, repo, "ruft auf")
+Rel(repo, db, "SQL, Transaktionen")
+@enduml
+----
+
+Begruendung:: Zwei Eingaenge (REST, CLI) teilen sich eine Service-Schicht.
+
+Enthaltene Bausteine::
+* REST-API (FastAPI) - SUC-01..06, alle Rollen.
+* CLI (Typer) - SUC-07..09, nur Wart.
+* Service-Schicht - enthaelt alle Geschaeftsregeln (BR-*).
+* Repositories - ein Repository je Aggregat.
+* SQLite-Datei - einzige Persistenz.
+
+Wichtige Schnittstellen:: siehe `system-use-cases.adoc` (SUC-01..09).
+
+
+
+=== Ebene 2 - Komponenten der Service-Schicht
+
+[cols="1,3" options="header"]
+|===
+|Komponente |Zustaendigkeit (UC-IDs, BR-Bereich)
+
+|AusleiheService |UC-01 Ausgabe, UC-02 Verlaengerung (BR-AUS-*)
+|RueckgabeService |UC-03 Ruecknahme, UC-04 Pruefung abschliessen (BR-RP-*, BR-KAU-*, BR-WA-01/02)
+|WartungService |UC-05 Wartung abschliessen, UC-06 Ausmustern (BR-WA-03/04, BR-VM-07)
+|VormerkungService |UC-07 Vormerken, Zuteilung nach Verfuegbarkeit/Verfall (BR-VM-*)
+|KatalogService |UC-08 Verfuegbarkeit/Status abfragen (lesend)
+|AuditService |schreibt Audit-Eintraege fuer jede Zustands-/Kautionsaenderung (Kapitel 8.4)
+|===
+
+
+Jede Komponente kapselt genau die BR-IDs ihres PRD-Abschnitts. Weitere Zerlegung (Ebene 3) ist fuer den Umfang von Release 1 nicht erforderlich.
+
+

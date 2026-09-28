@@ -1,0 +1,26 @@
+= Spezifikation: Leihgut — Übersicht
+:toc: left
+:sectnums:
+:icons: font
+:revnumber: 1.0
+:revdate: 2026-09-28
+
+Dieses Dokument verweist auf die Teile der Spezifikation, die aus `prd.adoc` abgeleitet sind.
+
+* xref:geschaeftsregeln.adoc[Geschäftsregeln] — BR-Katalog mit Gherkin-Szenarien je Regel.
+* xref:use-cases.adoc[Persona Use Cases] — Cockburn "Fully Dressed", User-Goal-Ebene, referenziert BR-IDs.
+* xref:system-use-cases.adoc[System Use Cases] — REST-API und CLI je Schnittstelle: Input/Validierung, Verarbeitung, Status-Codes/Fehler, EARS-Anforderungen.
+* xref:aktivitaetsdiagramme.adoc[Aktivitätsdiagramme] — PlantUML für die verzweigungsreichen Abläufe.
+* xref:supplementary.adoc[Supplementary Specifications] — Entitätsmodell, State Machines, Validierungsregeln.
+
+== Traceability
+
+....
+PRD (fachliche Regel)
+  → BR-ID (geschaeftsregeln.adoc)
+    → UC-ID (use-cases.adoc, Extension referenziert BR-ID)
+      → SUC-ID (system-use-cases.adoc, referenziert UC-ID)
+        → Gherkin-Szenario (geschaeftsregeln.adoc, referenziert BR-ID)
+....
+
+Jeder Test soll seine Use-Case-ID nennen (Definition of Done, `prd.adoc`).

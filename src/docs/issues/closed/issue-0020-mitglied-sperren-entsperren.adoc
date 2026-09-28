@@ -1,0 +1,47 @@
+= Issue 0020: Mitglied sperren/entsperren
+:issue-id: 0020
+:type: Story
+:status: closed
+:priority: Must
+:refs: BR-SP-01, BR-SP-02, BR-SP-03
+
+== Beschreibung
+
+Ableitung des Sperrstatus aus überfälligen Ausleihen (kein manueller Schalter): Sperre entsteht mit der ersten Überfälligkeit, endet erst wenn für alle überfälligen Ausleihen die Prüfung abgeschlossen ist (Issue 0011).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-SP-01 / BR-SP-02
+Szenario: Mitglied wird durch Überfälligkeit gesperrt
+  Angenommen eine Ausleihe hat eine Rückgabefrist vor dem heutigen Datum
+  Und der Gegenstand ist nicht zurückgegeben
+  Wenn der heutige Tag beginnt
+  Dann gilt das Mitglied als gesperrt
+
+# BR-SP-03
+Szenario: Sperre endet erst mit abgeschlossener Prüfung
+  Angenommen ein gesperrtes Mitglied hat den überfälligen Gegenstand zurückgegeben
+  Und die Prüfung ist noch nicht abgeschlossen
+  Dann bleibt das Mitglied gesperrt
+
+  Wenn der Wart die Prüfung für alle überfälligen Ausleihen abschließt
+  Dann endet die Sperre
+----
+
+== Abhängigkeiten
+
+- 0007 (Ausgabe eines Gegenstands)
+- 0011 (Prüfprotokoll abschließen mit Kautionsentscheidung)
+
+== Analyse
+
+* BR-SP-01 verlangt einen *abgeleiteten* Sperrstatus, keinen manuellen Schalter. Sperre = "mindestens eine offene (nicht abgeschlossene) Ausleihe des Mitglieds ist überfällig" (BR-SP-02: `rueckgabefrist < heute` und Ausleihe nicht `abgeschlossen` — der Zustand "in Prüfung" des Gegenstands ändert daran nichts, BR-SP-03).
+* Neue Repository-Methode `AusleiheRepository.hat_ueberfaellige_offene_ausleihen(mitglied_id, heute) -> bool`: `SELECT 1 FROM ausleihe WHERE mitglied_id = ? AND status != 'abgeschlossen' AND rueckgabefrist < ? LIMIT 1`.
+* Neue Methode `MitgliedService.ist_gesperrt(mitglied_id) -> bool`, ruft die Repository-Methode mit `date.today()` auf.
+* `AusleiheService.ausgeben` (BR-AUS-03) wechselt von `mitglied.gesperrt` (gespeichertes Flag) auf `self._mitglied_service.ist_gesperrt(mitglied_id)` (abgeleitet) — einzige Änderung an bestehendem Code für diese Story.
+* API: `_zu_mitglied_response` liefert `gesperrt` künftig über `mitglied_service.ist_gesperrt(mitglied.id)` statt über das gespeicherte Feld, damit `GET /mitglieder/{id}` denselben abgeleiteten Wert zeigt.
+* `MitgliedRepository.sperre_setzen` und die gespeicherte Spalte `mitglied.gesperrt` entfallen als Steuerungsmechanismus (kein manueller Schalter, BR-SP-01) — Methode wird entfernt; Spalte bleibt im Schema (Datenmigration vermeiden), wird aber nicht mehr geschrieben/gelesen für die Sperrlogik. `Mitglied`-Dataclass und `mitglied_repository.anlegen/finden` bleiben unverändert (liefern weiterhin `gesperrt=False` als Rohwert, ungenutzt für die Fachlogik).
+* Bestehender Test `test_gesperrtes_mitglied_leiht_nicht_aus_br_aus_03` in tests/test_ausleihe_service.py muss auf das neue Modell umgestellt werden: Sperre über eine bestehende, überfällige, nicht abgeschlossene Ausleihe erzeugen (z. B. `ausleihe_repository.rueckgabefrist_setzen` auf ein Datum in der Vergangenheit setzen), statt `sperre_setzen` zu rufen.
+* Kein neuer REST-/CLI-Endpunkt nötig (rein abgeleiteter Lesezugriff über bestehendes `GET /mitglieder/{id}`); Tests decken BR-SP-01, BR-SP-02, BR-SP-03 in `tests/test_mitglied_service.py`.

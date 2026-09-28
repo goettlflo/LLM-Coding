@@ -1,0 +1,40 @@
+= Issue 0017: Kategorie vormerken
+:issue-id: 0017
+:type: Story
+:status: closed
+:priority: Must
+:refs: UC-07, BR-VM-01, BR-VM-02, BR-VM-08, SUC-06
+
+== Beschreibung
+
+VormerkungService.vormerken(): reiht eine Vormerkung nach Eingangszeit in die Warteschlange der Kategorie ein — unabhängig von einer bestehenden Sperre des Mitglieds.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-VM-01 / BR-VM-02
+Szenario: Vormerkung reiht sich nach Eingangszeit ein
+  Angenommen eine Kategorie hat bereits eine Vormerkung
+  Wenn ein weiteres Mitglied dieselbe Kategorie vormerkt
+  Dann steht es an zweiter Stelle der Warteschlange
+
+# BR-VM-08
+Szenario: Gesperrtes Mitglied darf vormerken
+  Angenommen ein Mitglied ist gesperrt
+  Wenn es eine Kategorie vormerkt
+  Dann wird die Vormerkung angenommen
+----
+
+== Abhängigkeiten
+
+- 0003 (Gegenstand/Kategorie anlegen und abfragen)
+- 0004 (Mitglied-Stammdaten und Einweisung)
+
+== Analyse
+
+* Neuer `VormerkungService.vormerken(kategorie_id, mitglied_id) -> Vormerkung`: prüft nur, dass Kategorie und Mitglied existieren (BR-VM-01, sonst `NotFoundError`) — explizit KEINE Sperrprüfung (BR-VM-08: gesperrtes Mitglied darf vormerken).
+* Nutzt die bereits bestehende Tabelle `vormerkung` (kategorie_id, mitglied_id, eingangszeit) und `VormerkungRepository.anlegen` (bereits vorhanden seit Epic 0006, minimal für BR-AUS-07). Neue Repository-Methode `VormerkungRepository.warteschlange(kategorie_id) -> list[Vormerkung]` (`SELECT * FROM vormerkung WHERE kategorie_id = ? ORDER BY eingangszeit`), um die Position zu bestimmen (Index in der Liste + 1 = Warteschlangenposition). Neue Dataclass `Vormerkung` in app/models.py (id, kategorie_id, mitglied_id, eingangszeit), `anlegen()` liefert sie zurück statt `None`.
+* `eingangszeit` = `datetime.now(timezone.utc).isoformat()` (Sekundenauflösung reicht nicht für BR-VM-02-Reihenfolge bei schnellen Testaufrufen — ISO-Timestamp mit Mikrosekunden verwenden, wie bereits in `AuditService` üblich).
+* REST-Endpunkt `POST /kategorien/{id}/vormerkungen` (SUC-06 zweites Vorkommen in system-use-cases.adoc), Rolle `mitglied` oder `thekendienst`, Request-DTO `{ mitgliedId: string }`, Response 201 mit Warteschlangenposition (`{ position: int, ... }` oder vollständige Vormerkung-Ressource + `position`-Feld).
+* Tests: neues `tests/test_vormerkung_service.py`, TDD-Referenz BR-VM-01, BR-VM-02, BR-VM-08; API-Test in `tests/test_api.py`.
