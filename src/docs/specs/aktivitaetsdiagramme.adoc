@@ -1,0 +1,98 @@
+= Spezifikation: Aktivitätsdiagramme
+:toc: left
+:toclevels: 2
+:sectnums:
+:icons: font
+:revnumber: 1.0
+:revdate: 2026-09-28
+
+PlantUML-Aktivitätsdiagramme für die Abläufe mit den meisten Verzweigungen (nicht nur Happy Path).
+Referenz auf BR-IDs aus `geschaeftsregeln.adoc` und UC-IDs aus `use-cases.adoc`.
+
+== Ausgabe (UC-01)
+
+[plantuml]
+----
+start
+:Gegenstand und Mitglied wählen;
+if (Gegenstand verfügbar\noder für Mitglied reserviert?\n(BR-AUS-01)) then (nein)
+  :Ausgabe ablehnen (409);
+  stop
+endif
+if (weniger als 3\nlaufende Ausleihen?\n(BR-AUS-02)) then (nein)
+  :Ausgabe ablehnen (422);
+  stop
+endif
+if (Mitglied gesperrt?\n(BR-AUS-03)) then (ja)
+  :Ausgabe ablehnen (422);
+  stop
+endif
+if (einweisungspflichtig\nund keine Einweisung?\n(BR-AUS-04)) then (ja)
+  :Ausgabe ablehnen (422);
+  stop
+endif
+:Zuweisung + Prüfung\natomar ausführen (BR-NL-01);
+if (Wettlauf verloren?) then (ja)
+  :Ausgabe ablehnen (409);
+  stop
+endif
+:Kaution hinterlegen (BR-AUS-05, BR-KAT-04);
+:Rückgabefrist setzen (BR-AUS-05);
+:Ausgabe bestätigen (201);
+stop
+----
+
+== Rückgabe und Prüfung (UC-03, UC-04)
+
+[plantuml]
+----
+start
+:Rückgabe an Theke erfassen;
+:Gegenstand → "in Prüfung" (BR-RP-01);
+:Wart erstellt Prüfprotokoll (BR-RP-03);
+if (Abzug > hinterlegte Kaution?\n(BR-KAU-02)) then (ja)
+  :Prüfprotokoll ablehnen;
+  stop
+endif
+:Ausleihe abschließen,\nAbzug anwenden (BR-RP-04, BR-KAU-01);
+:Nutzungszähler +1 (BR-WA-01);
+if (Ergebnis?) then (verloren)
+  :volle Kaution einbehalten;
+  :Gegenstand → ausgemustert (BR-KAU-03);
+  :Warteschlange bleibt bestehen (BR-VM-07);
+  stop
+elseif (Zähler erreicht\nWartungsintervall?\n(BR-WA-02)) then (ja)
+  :Gegenstand → wartungsfällig;
+  :Warteschlange bleibt bestehen,\nkeine Reservierung (BR-VM-06);
+  stop
+else (unauffällig)
+  :Gegenstand → verfügbar;
+endif
+if (Vormerkung für Kategorie\nvorhanden? (BR-VM-03)) then (ja)
+  :Reservierung an erstes\nWarteschlangenmitglied,\natomar (BR-NL-02);
+  if (Mitglied gesperrt?\n(BR-VM-08)) then (ja)
+    :Reservierung überspringen,\nPlatz bleibt erhalten;
+  endif
+  :Verfallsfrist ab nächstem\nÖffnungstag setzen (BR-VM-04);
+endif
+if (weitere überfällige\nAusleihen des Mitglieds?\n(BR-SP-03)) then (nein)
+  :Sperre aufheben, falls gesetzt;
+endif
+stop
+----
+
+== Vormerkungs-Zuteilung nach Reservierungsverfall (BR-VM-05)
+
+[plantuml]
+----
+start
+:Reservierung erreicht\nVerfallsfrist (BR-VM-04);
+if (Öffnungstag beginnt?) then (ja)
+  if (weiteres Mitglied\nin Warteschlange?) then (ja)
+    :Gegenstand für nächstes\nMitglied reservieren (BR-VM-05);
+  else (nein)
+    :Gegenstand → verfügbar;
+  endif
+endif
+stop
+----

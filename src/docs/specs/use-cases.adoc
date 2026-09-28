@@ -1,0 +1,224 @@
+= Spezifikation: Persona Use Cases
+:toc: left
+:toclevels: 2
+:sectnums:
+:icons: font
+:revnumber: 1.0
+:revdate: 2026-09-28
+
+Use Cases im Cockburn'schen "Fully Dressed"-Format, auf User-Goal-Ebene.
+Jede Extension referenziert die Geschäftsregel (BR-ID), die sie erzwingt — siehe `geschaeftsregeln.adoc`.
+Aktivitätsdiagramme für die verzweigungsreichen Abläufe liegen in `aktivitaetsdiagramme.adoc`.
+
+== Akteure
+
+[cols="1,3"]
+|===
+|Thekendienst |Ehrenamtlich, wechselnde Personen, gibt Gegenstände aus und nimmt sie zurück (Persona: Karim).
+|Mitglied |Leiht Gegenstände, merkt vor (Persona: Sabine).
+|Wart |Prüft, wartet, mustert aus, entscheidet über Kautionsabzüge (Persona: Rolf).
+|===
+
+== UC-01: Gegenstand ausgeben
+
+[cols="1,4"]
+|===
+|Primary Actor |Thekendienst
+|Scope |Leihgut-System
+|Level |User Goal
+|Trigger |Ein Mitglied möchte einen Gegenstand an der Theke mitnehmen.
+|===
+
+*Vorbedingungen*
+
+* Der Gegenstand ist im Katalog erfasst.
+* Das Mitglied ist bekannt.
+
+*Hauptszenario*
+
+. Der Thekendienst wählt den Gegenstand und das Mitglied aus.
+. Das System prüft: Verfügbarkeit oder Reservierung für dieses Mitglied (BR-AUS-01), Anzahl laufender Ausleihen (BR-AUS-02), Sperre (BR-AUS-03), Einweisung bei Bedarf (BR-AUS-04).
+. Das System hinterlegt die Kaution und setzt die Rückgabefrist (BR-AUS-05, BR-KAT-04).
+. Das System gibt den Gegenstand als ausgeliehen aus.
+
+*Erweiterungen*
+
+[cols="1,3"]
+|===
+|2a |Gegenstand weder verfügbar noch für dieses Mitglied reserviert → Ausgabe abgelehnt (BR-AUS-01).
+|2b |Mitglied führt bereits drei Ausleihen → Ausgabe abgelehnt (BR-AUS-02).
+|2c |Mitglied ist gesperrt → Ausgabe abgelehnt (BR-AUS-03).
+|2d |Gegenstand ist einweisungspflichtig, Mitglied ohne Einweisung → Ausgabe abgelehnt (BR-AUS-04).
+|2e |Zwei gleichzeitige Ausgabeversuche für denselben Gegenstand → nur einer gelingt (BR-NL-01).
+|===
+
+*Nachbedingungen*
+
+* Erfolg: Ausleihe ist aktiv, Kaution hinterlegt, Rückgabefrist gesetzt.
+* Fehlschlag: Zustand unverändert, Ablehnungsgrund wird zurückgegeben.
+
+== UC-02: Ausleihe verlängern
+
+[cols="1,4"]
+|===
+|Primary Actor |Mitglied (über Thekendienst oder API)
+|Scope |Leihgut-System
+|Level |User Goal
+|Trigger |Ein Mitglied möchte die Rückgabefrist einer laufenden Ausleihe verschieben.
+|===
+
+*Vorbedingungen*: Die Ausleihe ist aktiv.
+
+*Hauptszenario*
+
+. Das Mitglied fragt die Verlängerung für eine laufende Ausleihe an.
+. Das System prüft: noch keine Verlängerung erfolgt (BR-AUS-06), keine offene Vormerkung der Kategorie, Ausleihe nicht überfällig (BR-AUS-07).
+. Das System verschiebt die Rückgabefrist um die volle Leihdauer der Kategorie.
+
+*Erweiterungen*
+
+[cols="1,3"]
+|===
+|2a |Ausleihe bereits einmal verlängert → Verlängerung abgelehnt (BR-AUS-06).
+|2b |Für die Kategorie liegt eine Vormerkung vor → Verlängerung abgelehnt (BR-AUS-07).
+|2c |Ausleihe ist überfällig → Verlängerung abgelehnt (BR-AUS-07).
+|===
+
+*Nachbedingungen*: Erfolg: neue Rückgabefrist gesetzt. Fehlschlag: Rückgabefrist unverändert.
+
+== UC-03: Gegenstand zurücknehmen
+
+[cols="1,4"]
+|===
+|Primary Actor |Thekendienst
+|Scope |Leihgut-System
+|Level |User Goal
+|Trigger |Ein Mitglied bringt einen ausgeliehenen Gegenstand zurück.
+|===
+
+*Hauptszenario*
+
+. Der Thekendienst erfasst die Rückgabe und optionale Auffälligkeiten.
+. Das System versetzt den Gegenstand in den Zustand "in Prüfung" (BR-RP-01).
+. Die Ausleihe bleibt bis zum Prüfprotokoll offen (BR-RP-01, BR-RP-02).
+
+*Erweiterungen*
+
+[cols="1,3"]
+|===
+|1a |Thekendienst versucht, direkt über die Kaution zu entscheiden → abgelehnt, das ist Aufgabe des Warts (BR-RP-02).
+|===
+
+*Nachbedingungen*: Gegenstand ist "in Prüfung", Ausleihe weiterhin offen, erfasste Auffälligkeiten liegen dem Wart vor.
+
+== UC-04: Prüfung abschließen
+
+[cols="1,4"]
+|===
+|Primary Actor |Wart
+|Scope |Leihgut-System
+|Level |User Goal
+|Trigger |Der Wart hat einen zurückgegebenen Gegenstand kontrolliert.
+|===
+
+*Vorbedingungen*: Gegenstand ist "in Prüfung" (BR-RP-03).
+
+*Hauptszenario*
+
+. Der Wart erstellt ein Prüfprotokoll mit Ergebnis und ggf. Kautionsabzug.
+. Das System prüft, dass ein etwaiger Abzug die hinterlegte Kaution nicht übersteigt (BR-KAU-02).
+. Das System schließt die Ausleihe ab und wendet den Abzug an (BR-RP-04, BR-KAU-01).
+. Das System rechnet nicht bereits vermerkte Schäden nicht erneut an (BR-RP-05).
+. Das System erhöht den Nutzungszähler (BR-WA-01) und setzt den Folgezustand: verfügbar, wartungsfällig oder ausgemustert (BR-RP-06, BR-WA-02, BR-KAU-03).
+. Wird der Gegenstand verfügbar und liegt eine Vormerkung vor, reserviert das System ihn für das erste Warteschlangenmitglied (BR-VM-03, BR-VM-04, BR-NL-02).
+. Das System endet ggf. die Sperre des Mitglieds, wenn keine weiteren überfälligen Ausleihen bestehen (BR-SP-03).
+
+*Erweiterungen*
+
+[cols="1,3"]
+|===
+|1a |Thekendienst versucht das Prüfprotokoll zu erstellen → abgelehnt (BR-RP-03).
+|2a |Abzug übersteigt hinterlegte Kaution → abgelehnt (BR-KAU-02).
+|5a |Ergebnis "verloren" → volle Kaution einbehalten, Gegenstand ausgemustert (BR-KAU-03).
+|5b |Nutzungszähler erreicht Wartungsintervall → Gegenstand wird wartungsfällig statt verfügbar (BR-WA-02).
+|6a |Erstes Warteschlangenmitglied ist gesperrt → Reservierung übersprungen, Platz bleibt erhalten (BR-VM-08).
+|===
+
+*Nachbedingungen*: Ausleihe abgeschlossen, Kautionsbewegung protokolliert (BR-KAU-04), Gegenstand in genau einem Folgezustand.
+
+== UC-05: Wartung abschließen
+
+[cols="1,4"]
+|===
+|Primary Actor |Wart
+|Scope |Leihgut-System
+|Level |User Goal
+|Trigger |Der Wart hat einen wartungsfälligen Gegenstand gewartet.
+|===
+
+*Hauptszenario*
+
+. Der Wart meldet die erledigte Wartung für einen wartungsfälligen Gegenstand.
+. Das System setzt den Gegenstand auf verfügbar und den Nutzungszähler auf null (BR-WA-03).
+. Liegt eine Vormerkung vor, reserviert das System den Gegenstand für das erste Warteschlangenmitglied (BR-VM-03).
+
+*Nachbedingungen*: Gegenstand verfügbar oder reserviert, Nutzungszähler null.
+
+== UC-06: Gegenstand ausmustern
+
+[cols="1,4"]
+|===
+|Primary Actor |Wart
+|Scope |Leihgut-System
+|Level |User Goal
+|Trigger |Ein Gegenstand ist irreparabel oder gilt als verloren.
+|===
+
+*Hauptszenario*
+
+. Der Wart mustert einen Gegenstand aus.
+. Das System setzt den Gegenstand endgültig auf ausgemustert.
+. Bestehende Vormerkungen der Kategorie bleiben unverändert in der Warteschlange (BR-VM-07).
+
+*Nachbedingungen*: Gegenstand im Endzustand "ausgemustert", Warteschlange unverändert.
+
+== UC-07: Gegenstand vormerken
+
+[cols="1,4"]
+|===
+|Primary Actor |Mitglied
+|Scope |Leihgut-System
+|Level |User Goal
+|Trigger |Kein Gegenstand einer gewünschten Kategorie ist verfügbar.
+|===
+
+*Hauptszenario*
+
+. Das Mitglied merkt eine Kategorie vor.
+. Das System reiht die Vormerkung nach Eingangszeit in die Warteschlange dieser Kategorie ein (BR-VM-01, BR-VM-02).
+
+*Erweiterungen*
+
+[cols="1,3"]
+|===
+|1a |Mitglied ist gesperrt → Vormerkung dennoch möglich, aber keine Abholung, bis die Sperre endet (BR-VM-08).
+|===
+
+*Nachbedingungen*: Vormerkung ist Teil der Warteschlange.
+
+== UC-08: Verfügbarkeit prüfen
+
+[cols="1,4"]
+|===
+|Primary Actor |Mitglied
+|Scope |Leihgut-System
+|Level |User Goal
+|Trigger |Ein Mitglied möchte vor dem Theken-Besuch wissen, ob ein Gegenstand frei ist.
+|===
+
+*Hauptszenario*
+
+. Das Mitglied fragt den Status eines Gegenstands oder einer Kategorie ab.
+. Das System liefert Zustand (verfügbar, ausgeliehen, wartungsfällig, in Prüfung, ausgemustert) und bei Vormerkung die Position in der Warteschlange.
+
+*Nachbedingungen*: Keine Zustandsänderung; reine Abfrage.

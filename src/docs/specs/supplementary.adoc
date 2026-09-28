@@ -1,0 +1,201 @@
+= Spezifikation: Supplementary Specifications
+:toc: left
+:toclevels: 2
+:sectnums:
+:icons: font
+:revnumber: 1.0
+:revdate: 2026-09-28
+
+Entitätsmodell, State Machines und Validierungsregeln. Interface Contracts (REST/CLI) siehe `system-use-cases.adoc`.
+
+== Entitätsmodell
+
+[plantuml]
+----
+hide circle
+skinparam linetype ortho
+
+entity Kategorie {
+  * id
+  --
+  name
+  leihdauerTage
+  wartungsintervall
+  einweisungspflichtig
+}
+
+entity Gegenstand {
+  * id
+  --
+  inventarnummer
+  kategorieId
+  wiederbeschaffungswert
+  nutzungszaehler
+  zustand
+}
+
+entity Mitglied {
+  * id
+  --
+  name
+  gesperrt
+}
+
+entity Einweisung {
+  * id
+  --
+  mitgliedId
+  kategorieId
+  datum
+}
+
+entity Ausleihe {
+  * id
+  --
+  gegenstandId
+  mitgliedId
+  ausgabedatum
+  ruckgabefrist
+  verlaengert
+  status
+}
+
+entity Kaution {
+  * id
+  --
+  ausleiheId
+  betrag
+  status
+}
+
+entity Kautionsbewegung {
+  * id
+  --
+  kautionId
+  typ
+  betrag
+  zeitstempel
+  ausloeser
+}
+
+entity Pruefprotokoll {
+  * id
+  --
+  ausleiheId
+  ergebnis
+  abzug
+  zeitstempel
+}
+
+entity Vormerkung {
+  * id
+  --
+  kategorieId
+  mitgliedId
+  eingangszeit
+}
+
+entity Reservierung {
+  * id
+  --
+  gegenstandId
+  mitgliedId
+  entstehungszeit
+  verfallszeit
+}
+
+Kategorie ||--o{ Gegenstand
+Mitglied ||--o{ Einweisung
+Kategorie ||--o{ Einweisung
+Gegenstand ||--o{ Ausleihe
+Mitglied ||--o{ Ausleihe
+Ausleihe ||--|| Kaution
+Kaution ||--o{ Kautionsbewegung
+Ausleihe ||--o{ Pruefprotokoll
+Kategorie ||--o{ Vormerkung
+Mitglied ||--o{ Vormerkung
+Gegenstand ||--o| Reservierung
+Mitglied ||--o{ Reservierung
+----
+
+== State Machine: Gegenstand
+
+[cols="1,4"]
+|===
+|Zustände |`verfuegbar`, `reserviert`, `ausgeliehen`, `in_pruefung`, `wartungsfaellig`, `ausgemustert`
+|===
+
+[plantuml]
+----
+[*] --> verfuegbar
+verfuegbar --> reserviert : Vormerkung vorhanden\n(BR-VM-03)
+verfuegbar --> ausgeliehen : Ausgabe (BR-AUS-01)
+reserviert --> ausgeliehen : Abholung durch\nreserviertes Mitglied
+reserviert --> reserviert : Verfall, nächstes\nWarteschlangenmitglied (BR-VM-05)
+reserviert --> verfuegbar : Verfall, Warteschlange leer (BR-VM-05)
+ausgeliehen --> in_pruefung : Rückgabe (BR-RP-01)
+in_pruefung --> verfuegbar : Prüfprotokoll: unauffällig (BR-RP-06)
+in_pruefung --> wartungsfaellig : Prüfprotokoll: Wartungsintervall erreicht (BR-WA-02)
+in_pruefung --> ausgemustert : Prüfprotokoll: verloren (BR-KAU-03)
+wartungsfaellig --> verfuegbar : Wartung abgeschlossen (BR-WA-03)
+wartungsfaellig --> ausgemustert : Ausmusterung (irreparabel)
+verfuegbar --> ausgemustert : Ausmusterung
+ausgemustert --> [*]
+----
+
+Ungültige Übergänge (müssen vom System verhindert werden): Ausgabe aus `wartungsfaellig`, `in_pruefung` oder `ausgemustert` (BR-WA-04, BR-AUS-01); Reservierung eines wartungsfälligen Gegenstands (BR-VM-06).
+
+== State Machine: Ausleihe
+
+[plantuml]
+----
+[*] --> aktiv : Ausgabe
+aktiv --> aktiv : Verlängerung (BR-AUS-06)
+aktiv --> ueberfaellig : Rückgabefrist verstrichen,\nnicht zurückgegeben (BR-SP-02)
+aktiv --> zurueckgegeben : Rückgabe (BR-RP-01)
+ueberfaellig --> zurueckgegeben : Rückgabe (BR-RP-01)
+zurueckgegeben --> abgeschlossen : Prüfprotokoll (BR-RP-04)
+abgeschlossen --> [*]
+----
+
+== State Machine: Mitglied (Sperre)
+
+[plantuml]
+----
+[*] --> frei
+frei --> gesperrt : mindestens eine Ausleihe\nüberfällig (BR-SP-01)
+gesperrt --> gesperrt : weitere überfällige\nAusleihe der Prüfung entzogen
+gesperrt --> frei : alle überfälligen Ausleihen\ngeprüft (BR-SP-03)
+----
+
+== State Machine: Reservierung
+
+[plantuml]
+----
+[*] --> aktiv : Zuweisung an erstes\nWarteschlangenmitglied (BR-VM-03)
+aktiv --> eingeloest : Abholung durch\nreserviertes Mitglied
+aktiv --> verfallen : Verfallsfrist erreicht,\nnicht abgeholt (BR-VM-04)
+eingeloest --> [*]
+verfallen --> [*]
+----
+
+== Validierungsregeln
+
+[cols="1,3,1"]
+|===
+|Feld |Regel |BR-ID
+
+|Gegenstand.inventarnummer |Eindeutig, Pflichtfeld |BR-KAT-01
+|Gegenstand.kategorieId |Muss existierende Kategorie referenzieren |BR-KAT-01
+|Gegenstand.wiederbeschaffungswert |> 0 Euro |BR-KAT-03
+|Kaution.betrag |= round(0.2 × Wiederbeschaffungswert), gedeckelt auf [5, 100] Euro |BR-KAT-04
+|Ausleihe (Ausgabe) |Gegenstand.zustand ∈ \{verfuegbar, reserviert-für-dieses-Mitglied\} |BR-AUS-01
+|Ausleihe (Ausgabe) |Anzahl aktiver Ausleihen des Mitglieds < 3 |BR-AUS-02
+|Ausleihe (Ausgabe) |Mitglied.gesperrt = false |BR-AUS-03
+|Ausleihe (Ausgabe) |Wenn Kategorie.einweisungspflichtig: Einweisung für (Mitglied, Kategorie) muss existieren |BR-AUS-04
+|Ausleihe (Verlängerung) |verlaengert = false |BR-AUS-06
+|Ausleihe (Verlängerung) |keine offene Vormerkung der Kategorie und nicht überfällig |BR-AUS-07
+|Prüfprotokoll.abzug |≤ Kaution.betrag |BR-KAU-02
+|Vormerkung |kategorieId und mitgliedId müssen existieren |BR-VM-01
+|Reservierung.verfallszeit |= nächster Öffnungstag nach Entstehung + 3 Kalendertage |BR-VM-04
+|===
