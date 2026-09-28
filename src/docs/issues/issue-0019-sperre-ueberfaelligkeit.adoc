@@ -1,0 +1,27 @@
+= Issue 0019: Sperre bei Überfälligkeit
+:issue-id: 0019
+:type: EPIC
+:status: open
+:priority: Must
+:refs: BR-SP-01, BR-SP-02, BR-SP-03
+
+== Beschreibung
+
+Ein Mitglied wird gesperrt, sobald eine Ausleihe überfällig ist, und bleibt gesperrt, bis alle überfälligen Ausleihen geprüft sind — nicht schon mit der Rückgabe.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given eine Ausleihe mit Rückgabefrist vor dem heutigen Datum, nicht zurückgegeben
+When der heutige Tag beginnt
+Then gilt das Mitglied als gesperrt
+----
+
+== Enthaltene Stories
+
+- 0020 Mitglied sperren/entsperren
+
+== Abhängigkeiten
+
+- 0006 (Ausleihe-Prozess)

@@ -1,0 +1,25 @@
+= Issue 0022: Gegenstand-/Kategorie-Status abfragen
+:issue-id: 0022
+:type: Story
+:status: open
+:priority: Should
+:refs: UC-08, SUC-04, SUC-05
+
+== Beschreibung
+
+KatalogService: rein lesende Abfrage von Gegenstandszustand (inkl. Reservierungsinhaber) und Kategorie-Verfügbarkeit (Anzahl freier Gegenstände, Warteschlangenlänge). Muss das Antwortzeit-Qualitätsziel (< 300 ms, arc42 Kapitel 10, QS-04) einhalten.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given 400 Gegenstände und 800 Mitglieder im System
+When die Verfügbarkeit eines Gegenstands abgefragt wird
+Then antwortet das System in unter 300 ms (95. Perzentil über 100 Aufrufe)
+And der Aufruf verändert keinen Zustand
+----
+
+== Abhängigkeiten
+
+- 0003 (Gegenstand/Kategorie anlegen und abfragen)
+- 0017 (Kategorie vormerken)

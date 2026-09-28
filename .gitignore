@@ -26,3 +26,4 @@ obj/
 __pycache__/
 *.pyc
 .venv/
+*.db

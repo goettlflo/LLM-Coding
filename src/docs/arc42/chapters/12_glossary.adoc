@@ -13,41 +13,25 @@ ifndef::imagesdir[:imagesdir: ../../images]
 [[section-glossary]]
 == Glossar
 
-ifdef::arc42help[]
-[role="arc42help"]
-****
-.Inhalt
-Die wesentlichen fachlichen und technischen Begriffe, die Stakeholder im Zusammenhang mit dem System verwenden.
-
-Nutzen Sie das Glossar ebenfalls als Übersetzungsreferenz, falls Sie in mehrsprachigen Teams arbeiten.
-
-.Motivation
-Sie sollten relevante Begriffe klar definieren, so dass alle Beteiligten
-
-* diese Begriffe identisch verstehen, und
-* vermeiden, mehrere Begriffe für die gleiche Sache zu haben.
-
-.Form
-
-Zweispaltige Tabelle mit <Begriff> und <Definition>.
-
-Eventuell weitere Spalten mit Übersetzungen, falls notwendig.
-
-
-.Weiterführende Informationen
-
-Siehe https://docs.arc42.org/section-12/[Glossar] in der online-Dokumentation (auf Englisch!).
-
-****
-endif::arc42help[]
+Gilt unverändert für Spezifikation, Architektur und Code (`src/docs/specs/prd.adoc`, Abschnitt "Glossar").
 
 [cols="e,2e" options="header"]
 |===
 |Begriff |Definition
 
-|<Begriff-1>
-|<Definition-1>
-
-|<Begriff-2
-|<Definition-2>
+|Gegenstand |Ein einzelnes physisches Exemplar mit eigener Inventarnummer.
+|Kategorie |Gruppe gleichartiger Gegenstände. Bestimmt Leihdauer, Wartungsintervall und Einweisungspflicht.
+|Mitglied |Person, die ausleihen darf.
+|Thekendienst |Rolle, die Gegenstände ausgibt und zurücknimmt.
+|Wart |Rolle, die prüft, wartet, ausmustert und über Kautionsabzüge entscheidet.
+|Ausleihe |Vorgang von der Ausgabe bis zum Abschluss der Prüfung.
+|Rückgabe |Übergabe des Gegenstands an die Theke. Beendet die Ausleihe nicht.
+|Prüfung |Kontrolle des Gegenstands nach der Rückgabe.
+|Prüfprotokoll |Ergebnis einer Prüfung. Schließt die Ausleihe ab.
+|Kaution |Bei der Ausgabe hinterlegter Betrag. Keine Gebühr.
+|Öffnungstag |Dienstag oder Samstag. Einziger Tag, an dem die Theke besetzt ist.
+|BR-ID |Eindeutiger Bezeichner einer Geschäftsregel, siehe `geschaeftsregeln.adoc`.
+|UC-ID |Eindeutiger Bezeichner eines Persona Use Case, siehe `use-cases.adoc`.
+|SUC-ID |Eindeutiger Bezeichner eines System Use Case (REST/CLI), siehe `system-use-cases.adoc`.
+|ADR |Architecture Decision Record, Nygard-Format mit Pugh-Matrix, siehe `src/docs/arc42/adr/`.
 |===

@@ -1,0 +1,2 @@
+[console_scripts]
+leihgut = app.cli.main:app

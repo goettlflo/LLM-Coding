@@ -13,98 +13,97 @@ ifndef::imagesdir[:imagesdir: ../../images]
 [[section-quality-scenarios]]
 == Qualitätsanforderungen
 
-ifdef::arc42help[]
-[role="arc42help"]
-****
-.Inhalt
-Dieser Abschnitt enthält alle relevanten Qualitätsanforderungen.
-
-Die wichtigsten davon haben Sie bereits in Abschnitt 1.2 (Qualitätsziele) hervorgehoben, daher soll hier nur auf sie verwiesen werden.
-In diesem Abschnitt 10 sollten Sie auch Qualitätsanforderungen mit geringerer Bedeutung erfassen, deren Nichterfüllung keine großen Risiken birgt (die aber _nice-to-have_ sein könnten).
-
-.Motivation
-Weil Qualitätsanforderungen die Architekturentscheidungen oft maßgeblich beeinflussen, sollten Sie die für Ihre Stakeholder relevanten Qualitätsanforderungen kennen, möglichst konkret und operationalisiert.
-
-.Weiterführende Informationen
-
-* Siehe https://docs.arc42.org/section-10/[Qualitätsanforderungen] in der online-Dokumentation (auf Englisch!).
-* Siehe auch das ausführliche  https://quality.arc42.org[Q42 Qualitätsmodell auf https://quality.arc42.org].
-
-****
-endif::arc42help[]
-
+Kapitel 1.2 nennt die Top-4 Qualitätsziele. Dieses Kapitel deckt alle acht ISO-25010-Merkmale ab und markiert je Eintrag, ob er ein Top-Ziel konkretisiert oder zusätzlich abgeleitet ist.
 
 === Übersicht der Qualitätsanforderungen
 
-ifdef::arc42help[]
-[role="arc42help"]
-****
-.Inhalt
-Eine Übersicht oder Zusammenfassung der Qualitätsanforderungen. 
+[cols="1,3,1"]
+|===
+|ISO-25010-Merkmal |Bezug zum Leihgut-System |Bezug zu Kapitel 1.2
 
-.Motivation
-Oft stößt man auf Dutzende (oder sogar Hunderte) von detaillierten Qualitätsanforderungen für ein System. 
-In diesem Abschnitt sollten Sie versuchen, sie zusammenzufassen, z. B. durch die Beschreibung von Kategorien oder Themen (wie z.B. von https://www.iso.org/obp/ui/#iso:std:iso-iec:25010:ed-2:v1:en[ISO 25010:2023] oder https://quality.arc42.org[Q42] vorgeschlagen).
-
-Wenn diese Kurzbeschreibungen oder Zusammenfassungen bereits präzise, spezifisch und messbar sind, können Sie Abschnitt 10.2 auslassen.
-
-.Form
-Verwenden Sie eine einfache Tabelle, in der jede Zeile eine Kategorie oder ein Thema und eine kurze Beschreibung der Qualitätsanforderung enthält.
-Alternativ können Sie auch eine Mindmap verwenden, um diese Qualitätsanforderungen zu strukturieren.
-In der Literatur (insb. [Bass+21]) ist die Idee eines _Quality Attribute Utility Tree_ (auf Deutsch manchmal kurz als _Qualitätsbaum_ bezeichnet) beschrieben worden, der den Oberbegriff „Qualität“ als Wurzel hat und eine baumartige Verfeinerung des Begriffs „Qualität“ verwendet. 
-
-
-****
-endif::arc42help[]
+|Funktionale Eignung |Vollständige Umsetzung der BR-Kataloge (BR-KAT/AUS/RP/KAU/WA/VM/SP/NL). |konkretisiert (alle Top-Ziele)
+|Zuverlässigkeit |ACID-Transaktionen (SQLite) verhindern inkonsistente Zwischenzustände bei Absturz. |abgeleitet
+|Leistungseffizienz |Antwortzeit < 300 ms bei 400/800 Datensätzen. |konkretisiert (Ziel 4)
+|Benutzbarkeit |Kein UI (PRD), daher kein Merkmal dieses Releases. |nicht zutreffend
+|Sicherheit |Einweisungsprüfung ohne Ausnahme, unabhängig von der Schnittstelle. |konkretisiert (Ziel 1)
+|Kompatibilität |Kein Nachbarsystem (PRD "ohne externe Dienste"). |nicht zutreffend
+|Wartbarkeit |Schichtenarchitektur (ADR-0003), BR-IDs 1:1 im Code auffindbar (Kapitel 5.2). |abgeleitet
+|Übertragbarkeit |Einzelner Python-Prozess, SQLite-Datei — auf jedem Rechner mit Python lauffähig. |abgeleitet
+|===
 
 === Qualitätsszenarien
 
-ifdef::arc42help[]
-[role="arc42help"]
-****
-.Inhalt
-Qualitätsszenarien konkretisieren Qualitätsanforderungen und ermöglichen es zu entscheiden, ob sie erfüllt sind (im Sinne von Akzeptanzkriterien).
-Stellen Sie sicher, dass Ihre Szenarien spezifisch und messbar sind.
+Format: Quelle, Stimulus, Artefakt, Umgebung, Reaktion, Antwortmaß (6-teilig).
 
+==== QS-01: Sicherheit (konkretisiert Ziel 1)
 
-Zwei Arten von Szenarien finden wir besonders nützlich:
+[cols="1,3"]
+|===
+|Quelle |Mitglied ohne dokumentierte Einweisung
+|Stimulus |Versucht, ein einweisungspflichtiges Gerät auszuleihen — über REST, dann erneut über CLI
+|Artefakt |AusleiheService (BR-AUS-04)
+|Umgebung |Regulärer Betrieb, beliebige Schnittstelle
+|Reaktion |Ausgabe wird abgelehnt, kein Zustand ändert sich
+|Antwortmaß |0 erfolgreiche Ausgaben von 100 Testaufrufen je Schnittstelle
+|===
 
-* Nutzungsszenarien (auch bekannt als Anwendungs- oder Anwendungsfallszenarien) beschreiben, wie das System zur Laufzeit auf einen bestimmten Auslöser reagieren soll.
-Hierunter fallen auch Szenarien zur Beschreibung von Effizienz oder Performance.
-Beispiel: Das System beantwortet eine Benutzeranfrage innerhalb einer Sekunde.
-* Änderungsszenarien_ beschreiben die gewünschte Wirkung einer Änderung oder Erweiterung des Systems oder seiner unmittelbaren Umgebung. 
-Beispiel: Zusätzliche Funktionalität wird implementiert oder Anforderungen an ein Qualitätsmerkmal ändern sich, und der Aufwand oder die Dauer der Änderung wird gemessen.
+==== QS-02: Korrektheit der Kaution (konkretisiert Ziel 2)
 
+[cols="1,3"]
+|===
+|Quelle |Wart
+|Stimulus |Schließt die 50. Prüfung für ein Mitglied mit gemischten Abzügen und Freigaben ab
+|Artefakt |KautionService, Kautionsbewegung-Tabelle
+|Umgebung |Regulärer Betrieb
+|Reaktion |Saldo wird aus allen Bewegungen (Hinterlegung, Abzug, Freigabe) neu berechnet
+|Antwortmaß |Abweichung zwischen gespeichertem Saldo und Neuberechnung: 0 Cent
+|===
 
-.Form
+==== QS-03: Nachvollziehbarkeit (konkretisiert Ziel 3)
 
-Typische Informationen für detaillierte Szenarien sind die folgenden:
+[cols="1,3"]
+|===
+|Quelle |Wart
+|Stimulus |Schließt eine Prüfung mit Kautionsabzug ab
+|Artefakt |AuditService
+|Umgebung |Regulärer Betrieb
+|Reaktion |Ein Audit-Eintrag mit Zeitstempel, Betrag, Auslöser und Verweis auf das Prüfprotokoll entsteht
+|Antwortmaß |Jeder Abschluss erzeugt genau einen Audit-Eintrag, nachweisbar durch DB-Abfrage
+|===
 
-In Kurzform (bevorzugt im Q42-Modell):
+==== QS-04: Antwortzeit (konkretisiert Ziel 4)
 
-* K**ontext/Hintergrund**: Um welche Art von System oder Komponente handelt es sich, wie sieht die Umgebung oder Situation aus?
-* **Quelle/Stimulus**: Wer oder was initiiert oder löst ein Verhalten, eine Reaktion oder eine Aktion aus.
-* **Metrik/Akzeptanzkriterien**: Eine Reaktion einschließlich einer _Maßnahme_ oder _Metrik_
+[cols="1,3"]
+|===
+|Quelle |Thekendienst
+|Stimulus |Fragt Ausgabefähigkeit eines Gegenstands ab
+|Artefakt |KatalogService, SQLite-Repository
+|Umgebung |400 Gegenstände, 800 Mitglieder, ein Prozess
+|Reaktion |System antwortet mit Verfügbarkeitsstatus
+|Antwortmaß |< 300 ms, 95. Perzentil über 100 Aufrufe
+|===
 
+==== QS-05: Nebenläufigkeit (abgeleitet, BR-NL-01/02)
 
-Die Langform von Szenarien (die von der SEI und [Bass+21] bevorzugt wird) ist detaillierter und enthält die folgenden Informationen:
+[cols="1,3"]
+|===
+|Quelle |Zwei Thekendienste
+|Stimulus |Beide lösen gleichzeitig eine Ausgabe desselben Gegenstands aus
+|Artefakt |GegenstandRepository, optimistisches Locking (ADR-0006)
+|Umgebung |Regulärer Betrieb, ein Prozess
+|Reaktion |Genau ein Versuch gelingt, der andere wird mit 409 abgelehnt
+|Antwortmaß |0 Fälle von doppelter Ausgabe in 1000 simulierten Wettlaufsituationen
+|===
 
-* **Szenario-ID**: Ein eindeutiger Bezeichner für das Szenario.
-* **Szenario-Name**: Ein kurzer, beschreibender Name für das Szenario.
-* **Quelle**: Die Entität (Benutzer, System oder Ereignis), die das Szenario auslöst.
-* **Stimulus**: Das auslösende Ereignis oder die Bedingung, auf die das System reagieren muss.
-* **Umgebung**: Der betriebliche Kontext oder die Bedingungen, unter denen das System den Stimulus erlebt.
-* **Artefakt**: Die Bausteine oder anderen Elemente des Systems, die von dem Stimulus betroffen sind.
-* **Reaktion**: Das Ergebnis oder Verhalten, das das System als Reaktion auf den Stimulus zeigt.
-* **Antwortmaß**: Das Kriterium oder die Metrik, nach der die Antwort des Systems bewertet wird.
+==== QS-06: Wartbarkeit (abgeleitet)
 
-.Beispiele
-Ausführliche Beispiele für Qualitätsanforderungen finden Sie auf https://quality.arc42.org[der Website zum Qualitätsmodell Q42].
+[cols="1,3"]
+|===
+|Quelle |Entwickler:in
+|Stimulus |Ändert eine Geschäftsregel (z. B. BR-AUS-02, Limit von drei auf vier Ausleihen)
+|Artefakt |AusleiheService
+|Umgebung |Entwicklungsumgebung
+|Reaktion |Änderung ist in genau einer Methode einer Service-Klasse lokalisiert, kein Eingriff in REST-/CLI-Code nötig
+|Antwortmaß |1 geänderte Methode, 0 geänderte Controller/CLI-Dateien
+|===
 
-.Weitere Informationen
-
-* Len Bass, Paul Clements, Rick Kazman: „Software Architecture in Practice“, 4. Auflage, Addison-Wesley, 2021.
-
-
-****
-endif::arc42help[]

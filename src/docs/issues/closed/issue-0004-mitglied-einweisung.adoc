@@ -1,0 +1,24 @@
+= Issue 0004: Mitglied-Stammdaten und Einweisung
+:issue-id: 0004
+:type: Story
+:status: closed
+:priority: Must
+:refs: BR-AUS-04
+
+== Beschreibung
+
+Mitglieder anlegen und dokumentierte Einweisungen für eine Kategorie erfassen — Grundlage für die Ausgabeprüfung einweisungspflichtiger Gegenstände (BR-AUS-04) in Issue 0007.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given ein Mitglied ohne Einweisung
+When eine Einweisung für eine Kategorie erfasst wird
+Then gilt das Mitglied für diese Kategorie als eingewiesen
+And für andere Kategorien weiterhin nicht
+----
+
+== Abhängigkeiten
+
+- 0002 (Projekt-Grundgerüst)

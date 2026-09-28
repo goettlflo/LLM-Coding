@@ -1,0 +1,49 @@
+= Issue 0018: Automatische Reservierungszuteilung
+:issue-id: 0018
+:type: Story
+:status: open
+:priority: Must
+:refs: BR-VM-03, BR-VM-04, BR-VM-05, BR-VM-06, BR-VM-08, BR-NL-02
+
+== Beschreibung
+
+Wird ein Gegenstand nach der Prüfung (Issue 0011) oder nach Wartung (Issue 0014) verfügbar, prüft der VormerkungService die Warteschlange der Kategorie und reserviert atomar für das erste Mitglied. Reservierungen verfallen drei Kalendertage nach dem nächsten Öffnungstag; gesperrte Mitglieder werden übersprungen, ohne ihren Platz zu verlieren.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-VM-04
+Szenario: Reservierung entsteht an einem Tag ohne unmittelbar folgenden Öffnungstag
+  Angenommen ein Gegenstand wird nach der Prüfung am Mittwoch verfügbar
+  Und für seine Kategorie liegt eine Vormerkung vor
+  Wenn der Gegenstand für das erste Mitglied der Warteschlange reserviert wird
+  Dann beginnt die Verfallsfrist von drei Kalendertagen am folgenden Samstag
+
+# BR-VM-05
+Szenario: Reservierung verfällt ungenutzt
+  Angenommen eine Reservierung hat ihre Verfallsfrist erreicht
+  Und das reservierte Mitglied ist nicht erschienen
+  Wenn der nächste Öffnungstag beginnt
+  Dann wird der Gegenstand an das nächste Mitglied der Warteschlange vergeben
+  Oder er wird verfügbar, wenn die Warteschlange leer ist
+
+# BR-VM-08
+Szenario: Gesperrtes Mitglied behält Warteschlangenplatz
+  Angenommen das erste Mitglied der Warteschlange ist gesperrt
+  Wenn ein Gegenstand dieser Kategorie verfügbar wird
+  Dann wird die Reservierung für dieses Mitglied übersprungen
+  Und das Mitglied behält seinen Platz in der Warteschlange
+
+# BR-NL-02
+Szenario: Gegenstand wird gleichzeitig durch zwei Prüfungsabschlüsse verfügbar gemeldet
+  Angenommen für eine Kategorie liegt eine Vormerkung vor
+  Und zwei Gegenstände dieser Kategorie werden gleichzeitig verfügbar
+  Wenn beide Verfügbarkeitsmeldungen gleichzeitig verarbeitet werden
+  Dann wird nur einer der beiden Gegenstände für das erste Mitglied reserviert
+----
+
+== Abhängigkeiten
+
+- 0011 (Prüfprotokoll abschließen mit Kautionsentscheidung)
+- 0017 (Kategorie vormerken)

@@ -1,0 +1,25 @@
+= Issue 0002: Projekt-Grundgerüst
+:issue-id: 0002
+:type: Story
+:status: closed
+:priority: Must
+:refs: ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005
+
+== Beschreibung
+
+Lauffähiges Python-Projekt: FastAPI-App, Typer-CLI, SQLite-Datei mit `schema.sql`, Schichten Controller/CLI → Service → Repository gemäß ADR-0001..0005. Kein Fachfeature, nur das Gerüst, damit die folgenden Stories eingehängt werden können.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given ein frisch ausgecheckter Projektordner
+When die REST-API gestartet wird
+Then antwortet ein Health-Endpunkt mit Status 200
+And die CLI zeigt ihre Hilfe (`--help`) an
+And `schema.sql` läuft fehlerfrei gegen eine leere SQLite-Datei
+----
+
+== Abhängigkeiten
+
+Keine.

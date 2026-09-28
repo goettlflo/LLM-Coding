@@ -9,10 +9,10 @@ ifndef::imagesdir[:imagesdir: ../images]
 // configure DE settings for asciidoc
 include::chapters/config.adoc[]
 
-= image:arc42-logo.png[arc42] Template
-:revnumber: {revnumber}
-:revdate: {revdate}
-:revremark: {revremark}
+= Leihgut — Werkzeugverleih einer Bibliothek der Dinge — Architektur
+:revnumber: 1.0
+:revdate: 2026-09-28
+:revremark: arc42-Architekturdokumentation
 // toc-title definition MUST follow document title without blank line!
 :toc-title: Inhaltsverzeichnis
 
@@ -24,18 +24,6 @@ include::chapters/about-arc42.adoc[]
 
 // horizontal line
 ***
-
-ifdef::arc42help[]
-[role="arc42help"]
-****
-[NOTE]
-====
-Diese Version des Templates enthält Hilfen und Erläuterungen.
-Sie dient der Einarbeitung in arc42 sowie dem Verständnis der Konzepte.
-Für die Dokumentation eigener System verwenden Sie besser die _plain_ Version.
-====
-****
-endif::arc42help[]
 
 // numbering from here on
 :numbered:

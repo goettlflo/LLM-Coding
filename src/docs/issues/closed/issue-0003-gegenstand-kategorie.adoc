@@ -1,0 +1,36 @@
+= Issue 0003: Gegenstand/Kategorie anlegen und abfragen
+:issue-id: 0003
+:type: Story
+:status: closed
+:priority: Must
+:refs: BR-KAT-01, BR-KAT-02, BR-KAT-03, BR-KAT-04
+
+== Beschreibung
+
+Kategorien (Leihdauer, Wartungsintervall, Einweisungspflicht) und Gegenstände (Inventarnummer, Kategorie, Wiederbeschaffungswert) anlegen. Kaution wird beim Anlegen nach BR-KAT-04 berechnet und mit dem Gegenstand gespeichert.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-KAT-01
+Szenario: Inventarnummer ist eindeutig
+  Angenommen ein Gegenstand mit einer Inventarnummer existiert
+  Wenn ein weiterer Gegenstand mit derselben Inventarnummer angelegt wird
+  Dann wird das Anlegen abgelehnt
+
+# BR-KAT-04
+Szenario Grundriss: Kautionsberechnung wird gedeckelt
+  Wenn ein Gegenstand mit Wiederbeschaffungswert "<wert>" angelegt wird
+  Dann beträgt die Kaution "<kaution>" Euro
+
+  Beispiele:
+    | wert | kaution |
+    | 10   | 5       |
+    | 100  | 20      |
+    | 600  | 100     |
+----
+
+== Abhängigkeiten
+
+- 0002 (Projekt-Grundgerüst)

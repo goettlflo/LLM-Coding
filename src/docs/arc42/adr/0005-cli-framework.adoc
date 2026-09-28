@@ -1,0 +1,27 @@
+= ADR-0005: CLI-Framework
+Status: Akzeptiert
+
+== Kontext
+
+PRD, Abschnitt "Rahmenbedingungen": CLI zusätzlich zur REST-API, nur für die Aufgaben des Warts (SUC-07..09 in `system-use-cases.adoc`).
+Sprache steht fest: Python (ADR-0001).
+
+== Entscheidung
+
+Typer als CLI-Framework. Kommandos werden aus denselben Type-Hint-Signaturen wie die FastAPI-Handler abgeleitet, was Validierungsregeln (`supplementary.adoc`) an beiden Eingängen konsistent hält.
+
+== Pugh-Matrix (Baseline: argparse)
+
+[cols="2,1,1,1"]
+|===
+|Kriterium |argparse (Stdlib) |Click |Typer
+
+|Zusatzabhängigkeit |S (Baseline) |- |-
+|Konsistenz mit FastAPI-Signaturen (Type Hints) |- |0 |+
+|Automatische Hilfetexte/Validierung |- |0 |+
+|===
+
+== Konsequenzen
+
+* Exit-Codes aus `system-use-cases.adoc` (0/1/2) werden über `typer.Exit(code=...)` gesetzt.
+* Die CLI ruft dieselbe Service-Schicht wie die REST-Controller auf (ADR-0003), keine eigene Geschäftslogik.

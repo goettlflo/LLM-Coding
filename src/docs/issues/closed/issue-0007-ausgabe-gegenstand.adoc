@@ -1,0 +1,52 @@
+= Issue 0007: Ausgabe eines Gegenstands
+:issue-id: 0007
+:type: Story
+:status: closed
+:priority: Must
+:refs: UC-01, BR-AUS-01, BR-AUS-02, BR-AUS-03, BR-AUS-04, BR-AUS-05, BR-NL-01, SUC-01
+
+== Beschreibung
+
+AusleiheService.ausgeben(): prüft Verfügbarkeit/Reservierung, Ausleihlimit, Sperre und Einweisungspflicht, hinterlegt die Kaution und setzt die Rückgabefrist. Atomar gegen gleichzeitige Ausgabeversuche (BR-NL-01, ADR-0006).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-AUS-01
+Szenario: Ausgabe eines nicht verfügbaren Gegenstands wird abgelehnt
+  Angenommen ein Gegenstand ist weder verfügbar noch für das anfragende Mitglied reserviert
+  Wenn die Theke die Ausgabe anstößt
+  Dann wird die Ausgabe abgelehnt
+
+# BR-AUS-02
+Szenario: Vierte gleichzeitige Ausleihe wird abgelehnt
+  Angenommen ein Mitglied führt drei gleichzeitige Ausleihen
+  Wenn dasselbe Mitglied einen vierten Gegenstand ausleihen will
+  Dann wird die Ausgabe abgelehnt
+
+# BR-AUS-03
+Szenario: Gesperrtes Mitglied leiht nicht aus
+  Angenommen ein Mitglied ist gesperrt
+  Wenn es einen verfügbaren Gegenstand ausleihen will
+  Dann wird die Ausgabe abgelehnt
+
+# BR-AUS-04
+Szenario: Einweisungspflichtiger Gegenstand ohne Einweisung wird nicht ausgegeben
+  Angenommen ein Gegenstand gehört zu einer einweisungspflichtigen Kategorie
+  Und das anfragende Mitglied hat keine dokumentierte Einweisung
+  Wenn die Theke die Ausgabe anstößt
+  Dann wird die Ausgabe abgelehnt
+
+# BR-NL-01
+Szenario: Zwei gleichzeitige Ausgabeversuche für denselben Gegenstand
+  Angenommen ein Gegenstand ist verfügbar
+  Wenn zwei Thekendienste gleichzeitig eine Ausgabe anstoßen
+  Dann gelingt genau einer der beiden Versuche
+----
+
+== Abhängigkeiten
+
+- 0003 (Gegenstand/Kategorie anlegen und abfragen)
+- 0004 (Mitglied-Stammdaten und Einweisung)
+- 0005 (Audit-Log-Infrastruktur)

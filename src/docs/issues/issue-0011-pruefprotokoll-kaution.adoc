@@ -1,0 +1,45 @@
+= Issue 0011: Prüfprotokoll abschließen mit Kautionsentscheidung
+:issue-id: 0011
+:type: Story
+:status: open
+:priority: Must
+:refs: UC-04, BR-RP-03, BR-RP-04, BR-RP-05, BR-RP-06, BR-KAU-01, BR-KAU-02, BR-KAU-03, BR-KAU-04, SUC-07
+
+== Beschreibung
+
+RueckgabeService.pruefungAbschliessen(): nur der Wart erstellt das Prüfprotokoll, das die Ausleihe abschließt und den Kautionsabzug festlegt (gedeckelt auf die hinterlegte Kaution). Jede Kautionsbewegung wird protokolliert (Issue 0005).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-RP-03
+Szenario: Nur der Wart erstellt das Prüfprotokoll
+  Angenommen ein Gegenstand ist in Prüfung
+  Wenn die Theke versucht, ein Prüfprotokoll zu erstellen
+  Dann wird der Versuch abgelehnt
+
+# BR-KAU-02
+Szenario: Abzug über der hinterlegten Kaution wird abgelehnt
+  Angenommen eine Kaution von 20 Euro ist hinterlegt
+  Wenn der Wart einen Abzug von 25 Euro festlegen will
+  Dann wird der Abzug abgelehnt
+
+# BR-KAU-03
+Szenario: Verlust behält die volle Kaution ein
+  Angenommen ein Gegenstand gilt als verloren
+  Wenn der Wart die Prüfung mit Ergebnis "verloren" abschließt
+  Dann wird die vollständige Kaution einbehalten
+  Und der Gegenstand wird ausgemustert
+
+# BR-RP-05
+Szenario: Bereits vermerkter Schaden wird nicht erneut zugerechnet
+  Angenommen ein Schaden ist bereits im Prüfprotokoll einer früheren Ausleihe vermerkt
+  Wenn der Wart die aktuelle Prüfung abschließt
+  Dann wird dieser Schaden nicht der laufenden Ausleihe zugerechnet
+----
+
+== Abhängigkeiten
+
+- 0010 (Gegenstand zurücknehmen)
+- 0005 (Audit-Log-Infrastruktur)

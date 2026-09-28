@@ -1,0 +1,36 @@
+= Issue 0008: Ausleihe verlängern
+:issue-id: 0008
+:type: Story
+:status: closed
+:priority: Must
+:refs: UC-02, BR-AUS-06, BR-AUS-07, SUC-02
+
+== Beschreibung
+
+AusleiheService.verlaengern(): einmalige Verlängerung um die volle Leihdauer, ausgeschlossen bei offener Vormerkung der Kategorie oder bereits überfälliger Ausleihe.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-AUS-06
+Szenario: Zweite Verlängerung derselben Ausleihe wird abgelehnt
+  Angenommen eine Ausleihe wurde bereits einmal verlängert
+  Wenn das Mitglied erneut verlängern will
+  Dann wird die Verlängerung abgelehnt
+
+# BR-AUS-07
+Szenario: Verlängerung bei offener Vormerkung wird abgelehnt
+  Angenommen für die Kategorie des ausgeliehenen Gegenstands liegt eine Vormerkung vor
+  Wenn das Mitglied verlängern will
+  Dann wird die Verlängerung abgelehnt
+
+Szenario: Verlängerung einer überfälligen Ausleihe wird abgelehnt
+  Angenommen eine Ausleihe ist bereits überfällig
+  Wenn das Mitglied verlängern will
+  Dann wird die Verlängerung abgelehnt
+----
+
+== Abhängigkeiten
+
+- 0007 (Ausgabe eines Gegenstands)

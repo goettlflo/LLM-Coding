@@ -13,25 +13,14 @@ ifndef::imagesdir[:imagesdir: ../../images]
 [[section-architecture-constraints]]
 == Randbedingungen
 
-ifdef::arc42help[]
-[role="arc42help"]
-****
-.Inhalt
-Randbedingungen und Vorgaben, die ihre Freiheiten bezüglich Entwurf, Implementierung oder Ihres Entwicklungsprozesses einschränken.
-Diese Randbedingungen gelten manchmal organisations- oder firmenweit über die Grenzen einzelner Systeme hinweg.
+[cols="1,3" options="header"]
+|===
+|Art |Randbedingung
 
-.Motivation
-Für eine tragfähige Architektur sollten Sie genau wissen, wo Ihre Freiheitsgrade bezüglich der Entwurfsentscheidungen liegen und wo Sie Randbedingungen beachten müssen.
-Sie können Randbedingungen vielleicht noch verhandeln, zunächst sind sie aber da.
-
-.Form
-Einfache Tabellen der Randbedingungen mit Erläuterungen.
-Bei Bedarf unterscheiden Sie technische, organisatorische und politische Randbedingungen oder übergreifende Konventionen (beispielsweise Programmier- oder Versionierungsrichtlinien, Dokumentations- oder Namenskonvention).
-
-
-.Weiterführende Informationen
-
-Siehe https://docs.arc42.org/section-2/[Randbedingungen] in der online-Dokumentation (auf Englisch!).
-
-****
-endif::arc42help[]
+|Technisch |REST-API für alle Anwendungsfälle, zusätzlich CLI für den Wart, keine Web-Oberfläche (PRD "Rahmenbedingungen").
+|Technisch |Ein Prozess, lokal startbar, ohne externe Dienste — kein Mailversand, keine Zahlungsanbindung, keine Cloud.
+|Technisch |Aktuelles Datum über austauschbare Quelle, damit Fristen (BR-VM-04, BR-SP-02) testbar bleiben.
+|Organisatorisch |Rollen kommen über Header/CLI-Flag, keine echte Authentifizierung in Release 1 (siehe Risiko R-01, Kapitel 11).
+|Sprachlich |Fachbegriffe im Code folgen dem Glossar aus `prd.adoc` (Kapitel 12 verweist darauf).
+|Technologie |Sprache, Framework, Persistenz frei wählbar → festgelegt in ADR-0001 bis ADR-0006 (`src/docs/arc42/adr/`).
+|===

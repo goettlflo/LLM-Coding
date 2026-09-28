@@ -1,0 +1,36 @@
+= Issue 0020: Mitglied sperren/entsperren
+:issue-id: 0020
+:type: Story
+:status: open
+:priority: Must
+:refs: BR-SP-01, BR-SP-02, BR-SP-03
+
+== Beschreibung
+
+Ableitung des Sperrstatus aus überfälligen Ausleihen (kein manueller Schalter): Sperre entsteht mit der ersten Überfälligkeit, endet erst wenn für alle überfälligen Ausleihen die Prüfung abgeschlossen ist (Issue 0011).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-SP-01 / BR-SP-02
+Szenario: Mitglied wird durch Überfälligkeit gesperrt
+  Angenommen eine Ausleihe hat eine Rückgabefrist vor dem heutigen Datum
+  Und der Gegenstand ist nicht zurückgegeben
+  Wenn der heutige Tag beginnt
+  Dann gilt das Mitglied als gesperrt
+
+# BR-SP-03
+Szenario: Sperre endet erst mit abgeschlossener Prüfung
+  Angenommen ein gesperrtes Mitglied hat den überfälligen Gegenstand zurückgegeben
+  Und die Prüfung ist noch nicht abgeschlossen
+  Dann bleibt das Mitglied gesperrt
+
+  Wenn der Wart die Prüfung für alle überfälligen Ausleihen abschließt
+  Dann endet die Sperre
+----
+
+== Abhängigkeiten
+
+- 0007 (Ausgabe eines Gegenstands)
+- 0011 (Prüfprotokoll abschließen mit Kautionsentscheidung)

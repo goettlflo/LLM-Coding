@@ -1,0 +1,26 @@
+= Issue 0014: Wartung abschließen
+:issue-id: 0014
+:type: Story
+:status: open
+:priority: Must
+:refs: UC-05, BR-WA-03, BR-WA-04, SUC-08
+
+== Beschreibung
+
+WartungService.wartungAbschliessen(): setzt einen wartungsfälligen Gegenstand auf verfügbar und den Nutzungszähler auf null. Wartungsfällige Gegenstände werden nie ausgegeben oder reserviert (BR-WA-04, bereits in Issue 0007/0018 durchgesetzt — hier nur der Zustandswechsel zurück).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-WA-03
+Szenario: Wartung setzt Zähler zurück
+  Angenommen ein Gegenstand ist wartungsfällig
+  Wenn der Wart die Wartung abschließt
+  Dann wechselt der Gegenstand in den Zustand "verfügbar"
+  Und der Nutzungszähler wird auf null gesetzt
+----
+
+== Abhängigkeiten
+
+- 0012 (Nutzungszähler und Wartungsfälligkeit)

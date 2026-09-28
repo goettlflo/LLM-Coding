@@ -1,0 +1,32 @@
+= Issue 0010: Gegenstand zurücknehmen
+:issue-id: 0010
+:type: Story
+:status: open
+:priority: Must
+:refs: UC-03, BR-RP-01, BR-RP-02, SUC-03
+
+== Beschreibung
+
+RueckgabeService.zuruecknehmen(): versetzt den Gegenstand in den Zustand "in Prüfung", erfasst optionale Auffälligkeiten der Theke. Beendet die Ausleihe nicht und entscheidet nicht über die Kaution.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-RP-01
+Szenario: Rückgabe beendet die Ausleihe nicht
+  Angenommen eine Ausleihe ist aktiv
+  Wenn der Gegenstand an der Theke zurückgegeben wird
+  Dann wechselt der Gegenstand in den Zustand "in Prüfung"
+  Und die Ausleihe bleibt bis zum Prüfprotokoll offen
+
+# BR-RP-02
+Szenario: Theke entscheidet nicht über die Kaution
+  Angenommen die Theke erfasst bei der Rückgabe eine Auffälligkeit
+  Wenn die Rückgabe abgeschlossen wird
+  Dann bleibt die Kaution bis zum Prüfprotokoll unverändert hinterlegt
+----
+
+== Abhängigkeiten
+
+- 0007 (Ausgabe eines Gegenstands)

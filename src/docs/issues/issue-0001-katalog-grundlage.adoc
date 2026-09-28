@@ -1,0 +1,31 @@
+= Issue 0001: Katalog-Grundlage (Walking Skeleton)
+:issue-id: 0001
+:type: EPIC
+:status: closed
+:priority: Must
+:refs: UC-08, BR-KAT-01, BR-KAT-02, BR-KAT-03, BR-KAT-04
+
+== Beschreibung
+
+Erster Schnitt durch alle Architekturschichten (REST → Service → Repository → SQLite): Katalog mit Gegenständen, Kategorien und Mitgliedern anlegen und abfragen können. Liefert das lauffähige Grundgerüst, auf dem alle folgenden Epics aufbauen (kein Feature für sich, sondern die Tracer Bullet gemäß AGENTS.md "Vertical Slicing").
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given ein leeres Leihgut-System
+When ein Gegenstand mit Kategorie, Inventarnummer und Wiederbeschaffungswert angelegt wird
+Then ist er über REST und CLI abrufbar
+And seine Kaution ist gemäß BR-KAT-04 berechnet
+----
+
+== Enthaltene Stories
+
+- 0002 Projekt-Grundgerüst
+- 0003 Gegenstand/Kategorie anlegen und abfragen
+- 0004 Mitglied-Stammdaten und Einweisung
+- 0005 Audit-Log-Infrastruktur
+
+== Abhängigkeiten
+
+Keine — dies ist der erste Schnitt.

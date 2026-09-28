@@ -1,0 +1,29 @@
+= Issue 0009: Rückgabe & Prüfung
+:issue-id: 0009
+:type: EPIC
+:status: open
+:priority: Must
+:refs: UC-03, UC-04
+
+== Beschreibung
+
+Rückgabe an der Theke und Prüfung durch den Wart — inklusive Kautionsentscheidung und Wartungsfälligkeit. Kernprozess für Rolf (Wart, PRD Persona).
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given eine aktive Ausleihe
+When der Gegenstand zurückgegeben und anschließend vom Wart geprüft wird
+Then schließt das Prüfprotokoll die Ausleihe ab und legt den Kautionsabzug fest
+----
+
+== Enthaltene Stories
+
+- 0010 Gegenstand zurücknehmen
+- 0011 Prüfprotokoll abschließen mit Kautionsentscheidung
+- 0012 Nutzungszähler und Wartungsfälligkeit
+
+== Abhängigkeiten
+
+- 0006 (Ausleihe-Prozess)

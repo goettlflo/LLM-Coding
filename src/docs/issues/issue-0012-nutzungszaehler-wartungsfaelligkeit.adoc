@@ -1,0 +1,25 @@
+= Issue 0012: Nutzungszähler und Wartungsfälligkeit
+:issue-id: 0012
+:type: Story
+:status: open
+:priority: Must
+:refs: BR-WA-01, BR-WA-02
+
+== Beschreibung
+
+Teil des Prüfungsabschlusses (Issue 0011): jede abgeschlossene Ausleihe erhöht den Nutzungszähler; erreicht er das Wartungsintervall der Kategorie, wird der Gegenstand statt "verfügbar" auf "wartungsfällig" gesetzt.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+# BR-WA-02
+Szenario: Nutzungszähler erreicht Wartungsintervall
+  Angenommen der Nutzungszähler eines Gegenstands liegt einen unter dem Wartungsintervall seiner Kategorie
+  Wenn die laufende Ausleihe durch das Prüfprotokoll abgeschlossen wird
+  Dann wechselt der Gegenstand statt zu "verfügbar" in den Zustand "wartungsfällig"
+----
+
+== Abhängigkeiten
+
+- 0011 (Prüfprotokoll abschließen mit Kautionsentscheidung)

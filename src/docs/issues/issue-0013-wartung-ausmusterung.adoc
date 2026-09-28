@@ -1,0 +1,28 @@
+= Issue 0013: Wartung & Ausmusterung
+:issue-id: 0013
+:type: EPIC
+:status: open
+:priority: Must
+:refs: UC-05, UC-06
+
+== Beschreibung
+
+Der Wart schließt eine erledigte Wartung ab oder mustert einen Gegenstand endgültig aus.
+
+== Akzeptanzkriterien
+
+[source,gherkin]
+----
+Given ein wartungsfälliger Gegenstand
+When der Wart die Wartung abschließt
+Then wird der Gegenstand verfügbar und der Nutzungszähler auf null gesetzt
+----
+
+== Enthaltene Stories
+
+- 0014 Wartung abschließen
+- 0015 Gegenstand ausmustern
+
+== Abhängigkeiten
+
+- 0009 (Rückgabe & Prüfung)
