@@ -1,0 +1,115 @@
+= Spezifikation: Geschäftsregeln mit BR-IDs
+:toc: left
+:toclevels: 2
+:sectnums:
+:icons: font
+:revnumber: 1.0
+:revdate: 2026-09-28
+
+Dieses Dokument vergibt BR-IDs für die drei zuletzt im PRD (`prd.adoc`) geänderten bzw. ergänzten Regeln und deckt sie mit Gherkin-Szenarien ab.
+Die fachliche Formulierung bleibt im PRD; hier folgt die Zerlegung in atomare, testbare Regeln.
+
+== Vormerkung — Reservierungsverfall
+
+=== BR-VM-01: Reservierungsfrist beginnt am nächsten Öffnungstag
+
+[cols="1,4"]
+|===
+|Regel |Eine Reservierung verfällt drei Kalendertage nach dem nächsten auf ihre Entstehung folgenden Öffnungstag (Dienstag oder Samstag), nicht ab dem Entstehungszeitpunkt selbst.
+|Quelle |PRD, Abschnitt "Vormerkung"
+|===
+
+[source,gherkin]
+----
+Szenario: Reservierung entsteht an einem Tag ohne unmittelbar folgenden Öffnungstag
+  Angenommen ein Gegenstand wird nach der Prüfung am Mittwoch verfügbar
+  Und für seine Kategorie liegt eine Vormerkung vor
+  Wenn der Gegenstand für das erste Mitglied der Warteschlange reserviert wird
+  Dann beginnt die Verfallsfrist von drei Kalendertagen am folgenden Samstag
+  Und die Reservierung verfällt frühestens am darauffolgenden Dienstag
+
+Szenario: Reservierung entsteht am Öffnungstag selbst
+  Angenommen ein Gegenstand wird nach der Prüfung an einem Samstag verfügbar
+  Und für seine Kategorie liegt eine Vormerkung vor
+  Wenn der Gegenstand für das erste Mitglied der Warteschlange reserviert wird
+  Dann beginnt die Verfallsfrist von drei Kalendertagen am selben Samstag
+  Und die Reservierung verfällt am darauffolgenden Dienstag
+
+Szenario: Mitglied holt innerhalb der Frist ab
+  Angenommen eine Reservierung besteht seit dem letzten Öffnungstag
+  Und die Verfallsfrist ist noch nicht erreicht
+  Wenn das reservierte Mitglied den Gegenstand an der Theke abholt
+  Dann wird der Gegenstand ausgegeben
+  Und die Reservierung endet mit der Ausgabe
+
+Szenario: Reservierung verfällt ungenutzt
+  Angenommen eine Reservierung hat ihre Verfallsfrist erreicht
+  Und das reservierte Mitglied ist nicht erschienen
+  Wenn der nächste Öffnungstag beginnt
+  Dann wird der Gegenstand an das nächste Mitglied der Warteschlange vergeben
+  Oder er wird verfügbar, wenn die Warteschlange leer ist
+----
+
+== Vormerkung — Ausmusterung des letzten Gegenstands
+
+=== BR-VM-02: Warteschlange bleibt bei vollständiger Ausmusterung einer Kategorie bestehen
+
+[cols="1,4"]
+|===
+|Regel |Wird der letzte verfügbare oder wartungsfällige Gegenstand einer Kategorie ausgemustert, bleibt eine bestehende Warteschlange unverändert erhalten. Das System löst sie nicht auf und erzeugt keine Benachrichtigung.
+|Quelle |PRD, Abschnitt "Vormerkung"
+|===
+
+[source,gherkin]
+----
+Szenario: Letzter Gegenstand einer Kategorie wird ausgemustert
+  Angenommen eine Kategorie hat genau einen Gegenstand
+  Und für diese Kategorie liegen zwei Vormerkungen in der Warteschlange vor
+  Wenn der Wart diesen Gegenstand nach der Prüfung ausmustert
+  Dann bleibt die Warteschlange mit beiden Vormerkungen unverändert bestehen
+  Und es entsteht keine Reservierung
+  Und es wird keine Benachrichtigung ausgelöst
+
+Szenario: Ein weiterer Gegenstand derselben Kategorie kommt später hinzu
+  Angenommen eine Kategorie ohne verfügbaren Gegenstand hat eine bestehende Warteschlange
+  Wenn ein neuer Gegenstand dieser Kategorie in den Katalog aufgenommen und verfügbar wird
+  Dann wird er für das erste Mitglied der bestehenden Warteschlange reserviert
+----
+
+== Nebenläufigkeit
+
+=== BR-NL-01: Atomare Ausgabe
+
+[cols="1,4"]
+|===
+|Regel |Prüfung der Ausgabebedingungen und Zuweisung eines Gegenstands an ein Mitglied erfolgen als eine unteilbare Operation. Treffen zwei Ausgabeversuche für denselben Gegenstand gleichzeitig ein, gelingt genau einer.
+|Quelle |PRD, Abschnitt "Nebenläufigkeit"
+|===
+
+[source,gherkin]
+----
+Szenario: Zwei gleichzeitige Ausgabeversuche für denselben Gegenstand
+  Angenommen ein Gegenstand ist verfügbar
+  Wenn zwei Thekendienste gleichzeitig eine Ausgabe dieses Gegenstands an unterschiedliche Mitglieder anstoßen
+  Dann gelingt genau einer der beiden Ausgabeversuche
+  Und der andere Versuch wird abgelehnt, als wäre der Gegenstand bereits ausgeliehen
+  Und es existiert am Ende genau eine aktive Ausleihe für diesen Gegenstand
+----
+
+=== BR-NL-02: Atomare Reservierungszuweisung
+
+[cols="1,4"]
+|===
+|Regel |Die Zuweisung einer Reservierung an das erste Mitglied der Warteschlange erfolgt als eine unteilbare Operation.
+|Quelle |PRD, Abschnitt "Nebenläufigkeit"
+|===
+
+[source,gherkin]
+----
+Szenario: Gegenstand wird gleichzeitig durch zwei Prüfungsabschlüsse verfügbar gemeldet
+  Angenommen für eine Kategorie liegt eine Vormerkung vor
+  Und zwei Gegenstände dieser Kategorie werden gleichzeitig nach ihrer jeweiligen Prüfung verfügbar
+  Wenn beide Verfügbarkeitsmeldungen gleichzeitig verarbeitet werden
+  Dann wird nur einer der beiden Gegenstände für das erste Mitglied der Warteschlange reserviert
+  Und der zweite Gegenstand bleibt verfügbar oder wird für das nächste Mitglied der Warteschlange reserviert
+----
