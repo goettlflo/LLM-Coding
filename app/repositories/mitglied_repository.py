@@ -27,10 +27,3 @@ class MitgliedRepository:
         if row is None:
             return None
         return Mitglied(id=row["id"], name=row["name"], gesperrt=bool(row["gesperrt"]))
-
-    def sperre_setzen(self, mitglied_id: str, gesperrt: bool) -> None:
-        """Test-/Grundlagen-Hilfsmethode; volle Sperr-Logik folgt in Epic 0019."""
-        self._conn.execute(
-            "UPDATE mitglied SET gesperrt = ? WHERE id = ?", (int(gesperrt), mitglied_id)
-        )
-        self._conn.commit()

@@ -5,6 +5,7 @@ from datetime import date
 
 from app.errors import NotFoundError
 from app.models import Einweisung, Mitglied
+from app.repositories.ausleihe_repository import AusleiheRepository
 from app.repositories.einweisung_repository import EinweisungRepository
 from app.repositories.mitglied_repository import MitgliedRepository
 
@@ -14,9 +15,11 @@ class MitgliedService:
         self,
         mitglied_repository: MitgliedRepository,
         einweisung_repository: EinweisungRepository,
+        ausleihe_repository: AusleiheRepository,
     ) -> None:
         self._mitglied_repository = mitglied_repository
         self._einweisung_repository = einweisung_repository
+        self._ausleihe_repository = ausleihe_repository
 
     def mitglied_anlegen(self, name: str) -> Mitglied:
         return self._mitglied_repository.anlegen(name)
@@ -36,3 +39,8 @@ class MitgliedService:
 
     def ist_eingewiesen(self, mitglied_id: str, kategorie_id: str) -> bool:
         return self._einweisung_repository.existiert(mitglied_id, kategorie_id)
+
+    def ist_gesperrt(self, mitglied_id: str) -> bool:  # BR-SP-01
+        return self._ausleihe_repository.hat_ueberfaellige_offene_ausleihen(
+            mitglied_id, date.today().isoformat()
+        )

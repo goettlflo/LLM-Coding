@@ -49,7 +49,7 @@ class AusleiheService:
         if mitglied is None:
             raise NotFoundError(f"Mitglied {mitglied_id} nicht gefunden")
 
-        if mitglied.gesperrt:  # BR-AUS-03
+        if self._mitglied_service.ist_gesperrt(mitglied_id):  # BR-AUS-03 (abgeleitet, BR-SP-01)
             raise ValidationError("Mitglied ist gesperrt", code="MEMBER_LOCKED")
 
         if self._ausleihe_repository.anzahl_aktiver_ausleihen(mitglied_id) >= AUSLEIHLIMIT:  # BR-AUS-02

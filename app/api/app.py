@@ -101,13 +101,13 @@ def create_app(db_path: str) -> FastAPI:
         body: MitgliedAnlegenRequest, kontext: Anwendungskontext = Depends(hole_kontext)
     ) -> MitgliedResponse:
         mitglied = kontext.mitglied_service.mitglied_anlegen(body.name)
-        return _zu_mitglied_response(mitglied)
+        return _zu_mitglied_response(mitglied, kontext)
 
     @app.get("/mitglieder/{mitglied_id}", response_model=MitgliedResponse)
     def mitglied_lesen(
         mitglied_id: str, kontext: Anwendungskontext = Depends(hole_kontext)
     ) -> MitgliedResponse:
-        return _zu_mitglied_response(kontext.mitglied_service.mitglied_lesen(mitglied_id))
+        return _zu_mitglied_response(kontext.mitglied_service.mitglied_lesen(mitglied_id), kontext)
 
     @app.post("/mitglieder/{mitglied_id}/einweisungen", response_model=EinweisungResponse, status_code=201)
     def einweisung_anlegen(
@@ -187,8 +187,9 @@ def _zu_gegenstand_response(gegenstand: Gegenstand) -> GegenstandResponse:
     )
 
 
-def _zu_mitglied_response(mitglied: Mitglied) -> MitgliedResponse:
-    return MitgliedResponse(id=mitglied.id, name=mitglied.name, gesperrt=mitglied.gesperrt)
+def _zu_mitglied_response(mitglied: Mitglied, kontext: Anwendungskontext) -> MitgliedResponse:
+    gesperrt = kontext.mitglied_service.ist_gesperrt(mitglied.id)  # BR-SP-01 (abgeleitet)
+    return MitgliedResponse(id=mitglied.id, name=mitglied.name, gesperrt=gesperrt)
 
 
 def _zu_ausleihe_response(ausleihe: Ausleihe, kontext: Anwendungskontext) -> AusleiheResponse:

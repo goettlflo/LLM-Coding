@@ -66,12 +66,16 @@ def test_vierte_gleichzeitige_ausleihe_wird_abgelehnt_br_aus_02(kontext: Anwendu
 
 def test_gesperrtes_mitglied_leiht_nicht_aus_br_aus_03(kontext: Anwendungskontext) -> None:
     kategorie = _kategorie(kontext)
-    gegenstand = _gegenstand(kontext, kategorie.id)
+    erster_gegenstand = _gegenstand(kontext, kategorie.id, inventarnummer="INV-A")
+    zweiter_gegenstand = _gegenstand(kontext, kategorie.id, inventarnummer="INV-B")
     mitglied = _mitglied(kontext)
-    kontext.mitglied_repository.sperre_setzen(mitglied.id, True)
+    ausleihe = kontext.ausleihe_service.ausgeben(erster_gegenstand.id, mitglied.id)
+    kontext.ausleihe_repository.rueckgabefrist_setzen(
+        ausleihe.id, (date.today() - timedelta(days=1)).isoformat()
+    )
 
     with pytest.raises(ValidationError):
-        kontext.ausleihe_service.ausgeben(gegenstand.id, mitglied.id)
+        kontext.ausleihe_service.ausgeben(zweiter_gegenstand.id, mitglied.id)
 
 
 def test_einweisungspflichtiger_gegenstand_ohne_einweisung_wird_abgelehnt_br_aus_04(

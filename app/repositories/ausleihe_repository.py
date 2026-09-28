@@ -78,6 +78,14 @@ class AusleiheRepository:
         )
         self._conn.commit()
 
+    def hat_ueberfaellige_offene_ausleihen(self, mitglied_id: str, heute: str) -> bool:  # BR-SP-02
+        row = self._conn.execute(
+            "SELECT 1 FROM ausleihe WHERE mitglied_id = ? AND status != 'abgeschlossen' "
+            "AND rueckgabefrist < ? LIMIT 1",
+            (mitglied_id, heute),
+        ).fetchone()
+        return row is not None
+
 
 def _to_ausleihe(row: sqlite3.Row) -> Ausleihe:
     return Ausleihe(
