@@ -26,6 +26,31 @@ class KautionRepository:
         ).fetchone()
         if row is None:
             return None
-        return Kaution(
-            id=row["id"], ausleihe_id=row["ausleihe_id"], betrag=row["betrag"], status=row["status"]
-        )
+        return _to_kaution(row)
+
+    def finden(self, kaution_id: str) -> Kaution | None:
+        row = self._conn.execute(
+            "SELECT * FROM kaution WHERE id = ?", (kaution_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return _to_kaution(row)
+
+    def abzug_anwenden(self, kaution_id: str, abzug: int, voller_einbehalt: bool = False) -> Kaution:
+        """BR-KAU-03/BR-KAU-04: aendert nur den Status, der hinterlegte Betrag bleibt unveraendert."""
+        kaution = self.finden(kaution_id)
+        if voller_einbehalt or abzug == kaution.betrag:
+            status = "einbehalten"
+        elif abzug > 0:
+            status = "teilweise_einbehalten"
+        else:
+            status = "freigegeben"
+        self._conn.execute("UPDATE kaution SET status = ? WHERE id = ?", (status, kaution_id))
+        self._conn.commit()
+        return Kaution(id=kaution.id, ausleihe_id=kaution.ausleihe_id, betrag=kaution.betrag, status=status)
+
+
+def _to_kaution(row: sqlite3.Row) -> Kaution:
+    return Kaution(
+        id=row["id"], ausleihe_id=row["ausleihe_id"], betrag=row["betrag"], status=row["status"]
+    )

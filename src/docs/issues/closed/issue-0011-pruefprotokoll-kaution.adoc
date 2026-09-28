@@ -1,7 +1,7 @@
 = Issue 0011: Prüfprotokoll abschließen mit Kautionsentscheidung
 :issue-id: 0011
 :type: Story
-:status: open
+:status: closed
 :priority: Must
 :refs: UC-04, BR-RP-03, BR-RP-04, BR-RP-05, BR-RP-06, BR-KAU-01, BR-KAU-02, BR-KAU-03, BR-KAU-04, SUC-07
 

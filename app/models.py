@@ -60,3 +60,14 @@ class Kaution:
     ausleihe_id: str
     betrag: int
     status: str
+
+
+@dataclass(frozen=True)
+class Pruefprotokoll:
+    id: str
+    gegenstand_id: str
+    ausleihe_id: str
+    ergebnis: str
+    abzug: int
+    schaden_vermerkt: bool
+    erstellt_am: str

@@ -69,3 +69,14 @@ CREATE TABLE IF NOT EXISTS audit_log (
     ausloeser TEXT NOT NULL,
     referenz_id TEXT NOT NULL
 );
+
+-- Issue 0011: Pruefprotokoll des Warts mit Kautionsentscheidung (BR-RP-05)
+CREATE TABLE IF NOT EXISTS pruefprotokoll (
+    id TEXT PRIMARY KEY,
+    gegenstand_id TEXT NOT NULL REFERENCES gegenstand(id),
+    ausleihe_id TEXT NOT NULL REFERENCES ausleihe(id),
+    ergebnis TEXT NOT NULL,
+    abzug INTEGER NOT NULL DEFAULT 0,
+    schaden_vermerkt INTEGER NOT NULL DEFAULT 0,
+    erstellt_am TEXT NOT NULL
+);

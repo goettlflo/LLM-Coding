@@ -14,6 +14,7 @@ from app.repositories.gegenstand_repository import GegenstandRepository
 from app.repositories.kategorie_repository import KategorieRepository
 from app.repositories.kaution_repository import KautionRepository
 from app.repositories.mitglied_repository import MitgliedRepository
+from app.repositories.pruefprotokoll_repository import PruefprotokollRepository
 from app.repositories.vormerkung_repository import VormerkungRepository
 from app.services.audit_service import AuditService
 from app.services.ausleihe_service import AusleiheService
@@ -31,6 +32,7 @@ class Anwendungskontext:
     ausleihe_repository: AusleiheRepository
     kaution_repository: KautionRepository
     vormerkung_repository: VormerkungRepository
+    pruefprotokoll_repository: PruefprotokollRepository
     audit_repository: AuditRepository
     katalog_service: KatalogService
     mitglied_service: MitgliedService
@@ -47,6 +49,7 @@ def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
     ausleihe_repository = AusleiheRepository(conn)
     kaution_repository = KautionRepository(conn)
     vormerkung_repository = VormerkungRepository(conn)
+    pruefprotokoll_repository = PruefprotokollRepository(conn)
     audit_repository = AuditRepository(conn)
 
     katalog_service = KatalogService(kategorie_repository, gegenstand_repository)
@@ -62,7 +65,13 @@ def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
         mitglied_service=mitglied_service,
         audit_service=audit_service,
     )
-    rueckgabe_service = RueckgabeService(gegenstand_repository=gegenstand_repository)
+    rueckgabe_service = RueckgabeService(
+        gegenstand_repository=gegenstand_repository,
+        ausleihe_repository=ausleihe_repository,
+        kaution_repository=kaution_repository,
+        pruefprotokoll_repository=pruefprotokoll_repository,
+        audit_service=audit_service,
+    )
 
     return Anwendungskontext(
         kategorie_repository=kategorie_repository,
@@ -72,6 +81,7 @@ def erstellen(conn: sqlite3.Connection) -> Anwendungskontext:
         ausleihe_repository=ausleihe_repository,
         kaution_repository=kaution_repository,
         vormerkung_repository=vormerkung_repository,
+        pruefprotokoll_repository=pruefprotokoll_repository,
         audit_repository=audit_repository,
         katalog_service=katalog_service,
         mitglied_service=mitglied_service,

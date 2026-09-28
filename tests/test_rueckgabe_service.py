@@ -1,10 +1,12 @@
-"""Issue 0010 (Gegenstand zurücknehmen): BR-RP-01, BR-RP-02."""
+"""Issue 0010 (Gegenstand zurücknehmen): BR-RP-01, BR-RP-02.
+Issue 0011 (Prüfprotokoll abschließen): BR-RP-03..05, BR-KAU-01..04.
+"""
 from __future__ import annotations
 
 import pytest
 
 from app.container import Anwendungskontext
-from app.errors import NotFoundError
+from app.errors import ConflictError, NotFoundError, ValidationError
 
 
 def _kategorie(kontext: Anwendungskontext, *, leihdauer_tage=14, einweisungspflichtig=False):
@@ -65,3 +67,101 @@ def test_rueckgabe_nicht_ausgeliehener_gegenstand_wird_abgelehnt(
 def test_rueckgabe_unbekannter_gegenstand_wird_abgelehnt(kontext: Anwendungskontext) -> None:
     with pytest.raises(NotFoundError):
         kontext.rueckgabe_service.zuruecknehmen("unbekannt")
+
+
+def _in_pruefung_mit_ausleihe(kontext: Anwendungskontext, inventarnummer="INV-100"):
+    kategorie = _kategorie(kontext)
+    gegenstand = _gegenstand(kontext, kategorie.id, inventarnummer=inventarnummer)
+    mitglied = _mitglied(kontext)
+    ausleihe = kontext.ausleihe_service.ausgeben(gegenstand.id, mitglied.id)
+    kontext.rueckgabe_service.zuruecknehmen(gegenstand.id)
+    return gegenstand, ausleihe
+
+
+def test_pruefung_durch_thekendienst_wird_abgelehnt_br_rp_03(kontext: Anwendungskontext) -> None:
+    gegenstand, _ = _in_pruefung_mit_ausleihe(kontext)
+
+    with pytest.raises(ValidationError):
+        kontext.rueckgabe_service.pruefung_abschliessen(
+            gegenstand.id, "unauffaellig", rolle="thekendienst"
+        )
+
+
+def test_abzug_ueber_kaution_wird_abgelehnt_br_kau_02(kontext: Anwendungskontext) -> None:
+    gegenstand, ausleihe = _in_pruefung_mit_ausleihe(kontext)
+    kaution = kontext.kaution_repository.finden_fuer_ausleihe(ausleihe.id)
+
+    with pytest.raises(ValidationError):
+        kontext.rueckgabe_service.pruefung_abschliessen(
+            gegenstand.id, "wartungsfaellig", abzug=kaution.betrag + 5
+        )
+
+
+def test_verloren_behaelt_volle_kaution_ein_und_mustert_aus_br_kau_03(
+    kontext: Anwendungskontext,
+) -> None:
+    gegenstand, ausleihe = _in_pruefung_mit_ausleihe(kontext)
+    kaution = kontext.kaution_repository.finden_fuer_ausleihe(ausleihe.id)
+
+    kontext.rueckgabe_service.pruefung_abschliessen(gegenstand.id, "verloren")
+
+    kaution_nachher = kontext.kaution_repository.finden_fuer_ausleihe(ausleihe.id)
+    gegenstand_nachher = kontext.gegenstand_repository.finden(gegenstand.id)
+    assert kaution_nachher.status == "einbehalten"
+    assert kaution_nachher.betrag == kaution.betrag
+    assert gegenstand_nachher.zustand == "ausgemustert"
+
+
+def test_pruefung_abschliessen_schliesst_die_ausleihe_ab_br_rp_04(
+    kontext: Anwendungskontext,
+) -> None:
+    gegenstand, ausleihe = _in_pruefung_mit_ausleihe(kontext)
+
+    kontext.rueckgabe_service.pruefung_abschliessen(gegenstand.id, "unauffaellig")
+
+    ausleihe_nachher = kontext.ausleihe_repository.finden(ausleihe.id)
+    assert ausleihe_nachher.status == "abgeschlossen"
+    gegenstand_nachher = kontext.gegenstand_repository.finden(gegenstand.id)
+    assert gegenstand_nachher.zustand == "verfuegbar"
+
+
+def test_pruefung_abschliessen_wartungsfaellig_setzt_zustand_br_rp_06(
+    kontext: Anwendungskontext,
+) -> None:
+    gegenstand, _ = _in_pruefung_mit_ausleihe(kontext)
+
+    kontext.rueckgabe_service.pruefung_abschliessen(gegenstand.id, "wartungsfaellig")
+
+    gegenstand_nachher = kontext.gegenstand_repository.finden(gegenstand.id)
+    assert gegenstand_nachher.zustand == "wartungsfaellig"
+
+
+def test_bereits_vermerkter_schaden_wird_nicht_erneut_zugerechnet_br_rp_05(
+    kontext: Anwendungskontext,
+) -> None:
+    kategorie = _kategorie(kontext)
+    gegenstand = _gegenstand(kontext, kategorie.id)
+    mitglied = _mitglied(kontext)
+
+    # Erste Ausleihe: Schaden wird im Prüfprotokoll vermerkt.
+    kontext.ausleihe_service.ausgeben(gegenstand.id, mitglied.id)
+    kontext.rueckgabe_service.zuruecknehmen(gegenstand.id, auffaelligkeit="Riss im Stoff")
+    kontext.rueckgabe_service.pruefung_abschliessen(gegenstand.id, "wartungsfaellig", abzug=5)
+
+    # Der Gegenstand muss vor der zweiten Ausleihe wieder verfügbar sein.
+    kontext.gegenstand_repository.zustand_wechseln_atomar(
+        gegenstand.id, "wartungsfaellig", "verfuegbar",
+        kontext.gegenstand_repository.finden(gegenstand.id).version,
+    )
+
+    # Zweite Ausleihe: derselbe Schaden darf nicht erneut zugerechnet werden.
+    zweite_ausleihe = kontext.ausleihe_service.ausgeben(gegenstand.id, mitglied.id)
+    kontext.rueckgabe_service.zuruecknehmen(gegenstand.id)
+    protokoll = kontext.rueckgabe_service.pruefung_abschliessen(
+        gegenstand.id, "unauffaellig", abzug=5
+    )
+
+    assert protokoll.abzug == 0
+    assert protokoll.schaden_vermerkt is False
+    kaution_zweite = kontext.kaution_repository.finden_fuer_ausleihe(zweite_ausleihe.id)
+    assert kaution_zweite.status == "freigegeben"

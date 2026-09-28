@@ -1,17 +1,36 @@
-"""RueckgabeService — Rücknahme an der Theke (Issue 0010).
+"""RueckgabeService — Rücknahme an der Theke (Issue 0010) und Prüfprotokoll (Issue 0011).
 
-BR-RP-01, BR-RP-02 (ADR-0003: ein Service je fachlichem Vorgang).
+BR-RP-01..05 (ADR-0003: ein Service je fachlichem Vorgang).
 """
 from __future__ import annotations
 
-from app.errors import ConflictError, NotFoundError
-from app.models import Gegenstand
+from datetime import date
+
+from app.errors import ConflictError, NotFoundError, ValidationError
+from app.models import Gegenstand, Pruefprotokoll
+from app.repositories.ausleihe_repository import AusleiheRepository
 from app.repositories.gegenstand_repository import GegenstandRepository
+from app.repositories.kaution_repository import KautionRepository
+from app.repositories.pruefprotokoll_repository import PruefprotokollRepository
+from app.services.audit_service import AuditService
+
+ERGEBNISSE = {"unauffaellig", "wartungsfaellig", "verloren"}
 
 
 class RueckgabeService:
-    def __init__(self, gegenstand_repository: GegenstandRepository) -> None:
+    def __init__(
+        self,
+        gegenstand_repository: GegenstandRepository,
+        ausleihe_repository: AusleiheRepository,
+        kaution_repository: KautionRepository,
+        pruefprotokoll_repository: PruefprotokollRepository,
+        audit_service: AuditService,
+    ) -> None:
         self._gegenstand_repository = gegenstand_repository
+        self._ausleihe_repository = ausleihe_repository
+        self._kaution_repository = kaution_repository
+        self._pruefprotokoll_repository = pruefprotokoll_repository
+        self._audit_service = audit_service
 
     def zuruecknehmen(self, gegenstand_id: str, auffaelligkeit: str | None = None) -> Gegenstand:
         gegenstand = self._gegenstand_repository.finden(gegenstand_id)
@@ -26,3 +45,68 @@ class RueckgabeService:
             raise ConflictError("Gegenstand wurde inzwischen anderweitig verändert")
 
         return self._gegenstand_repository.finden(gegenstand.id)
+
+    def pruefung_abschliessen(
+        self, gegenstand_id: str, ergebnis: str, abzug: int = 0, rolle: str = "wart"
+    ) -> Pruefprotokoll:
+        if ergebnis not in ERGEBNISSE:
+            raise ValidationError(f"Unbekanntes Ergebnis: {ergebnis}")
+        if rolle != "wart":  # BR-RP-03
+            raise ValidationError("Nur der Wart erstellt das Prüfprotokoll", code="FORBIDDEN")
+
+        gegenstand = self._gegenstand_repository.finden(gegenstand_id)
+        if gegenstand is None:
+            raise NotFoundError(f"Gegenstand {gegenstand_id} nicht gefunden")
+        if gegenstand.zustand != "in_pruefung":  # BR-RP-03
+            raise ConflictError("Gegenstand ist nicht in Prüfung")
+
+        ausleihe = self._ausleihe_repository.finden_aktive_fuer_gegenstand(gegenstand_id)
+        if ausleihe is None:
+            raise ConflictError("Keine aktive Ausleihe für den Gegenstand gefunden")
+
+        kaution = self._kaution_repository.finden_fuer_ausleihe(ausleihe.id)
+        if kaution is None:
+            raise ConflictError("Keine Kaution für die Ausleihe hinterlegt")
+
+        if abzug > kaution.betrag:  # BR-KAU-02
+            raise ValidationError("Abzug übersteigt die hinterlegte Kaution")
+
+        # BR-RP-05: ein bereits vermerkter Schaden wird nicht erneut zugerechnet
+        bereits_vermerkt = self._pruefprotokoll_repository.hat_vermerkten_schaden(gegenstand_id)
+        if bereits_vermerkt:
+            effektiver_abzug = 0
+            schaden_vermerkt = False
+        else:
+            effektiver_abzug = abzug
+            schaden_vermerkt = abzug > 0
+
+        if ergebnis == "verloren":  # BR-KAU-03
+            self._kaution_repository.abzug_anwenden(kaution.id, kaution.betrag, voller_einbehalt=True)
+            folgezustand = "ausgemustert"
+            kaution_abzug = kaution.betrag
+        else:
+            self._kaution_repository.abzug_anwenden(kaution.id, effektiver_abzug)
+            folgezustand = "verfuegbar" if ergebnis == "unauffaellig" else "wartungsfaellig"
+            kaution_abzug = effektiver_abzug
+
+        self._ausleihe_repository.abschliessen(ausleihe.id)  # BR-RP-04
+
+        erfolgreich = self._gegenstand_repository.zustand_wechseln_atomar(
+            gegenstand.id, "in_pruefung", folgezustand, gegenstand.version
+        )
+        if not erfolgreich:
+            raise ConflictError("Gegenstand wurde inzwischen anderweitig verändert")
+
+        pruefprotokoll = self._pruefprotokoll_repository.anlegen(
+            gegenstand_id=gegenstand.id,
+            ausleihe_id=ausleihe.id,
+            ergebnis=ergebnis,
+            abzug=effektiver_abzug,
+            schaden_vermerkt=schaden_vermerkt,
+            erstellt_am=date.today().isoformat(),
+        )
+
+        self._audit_service.protokollieren(
+            "kaution_bewegung", str(kaution_abzug), f"pruefprotokoll:{pruefprotokoll.id}", kaution.id
+        )
+        return pruefprotokoll

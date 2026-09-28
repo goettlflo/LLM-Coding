@@ -64,6 +64,20 @@ class AusleiheRepository:
         )
         self._conn.commit()
 
+    def finden_aktive_fuer_gegenstand(self, gegenstand_id: str) -> Ausleihe | None:
+        row = self._conn.execute(
+            "SELECT * FROM ausleihe WHERE gegenstand_id = ? AND status = 'aktiv'", (gegenstand_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return _to_ausleihe(row)
+
+    def abschliessen(self, ausleihe_id: str) -> None:  # BR-RP-04
+        self._conn.execute(
+            "UPDATE ausleihe SET status = 'abgeschlossen' WHERE id = ?", (ausleihe_id,)
+        )
+        self._conn.commit()
+
 
 def _to_ausleihe(row: sqlite3.Row) -> Ausleihe:
     return Ausleihe(
