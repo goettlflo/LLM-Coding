@@ -1,7 +1,7 @@
 = Issue 0009: Rückgabe & Prüfung
 :issue-id: 0009
 :type: EPIC
-:status: open
+:status: closed
 :priority: Must
 :refs: UC-03, UC-04
 
