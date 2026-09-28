@@ -4,7 +4,9 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from app.container import erstellen
 from app.api.app import create_app
+from app.db import get_connection
 
 
 @pytest.fixture
@@ -313,9 +315,11 @@ def test_suc_04_gegenstand_lesen_reserviert_enthaelt_reservierten_mitglied_id(
         json={"mitgliedId": vormerker_id},
         headers={"X-Rolle": "mitglied"},
     )
-    kontext = client.app.state.kontext
+    conn = get_connection(client.app.state.db_path)
+    kontext = erstellen(conn)
     kontext.rueckgabe_service.zuruecknehmen(gegenstand_id)
     kontext.rueckgabe_service.pruefung_abschliessen(gegenstand_id, "unauffaellig")
+    conn.close()
 
     response = client.get(f"/gegenstaende/{gegenstand_id}")
 

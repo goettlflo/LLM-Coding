@@ -36,7 +36,8 @@ def create_app(db_path: str) -> FastAPI:
 
     init_conn = get_connection(db_path)
     init_db(init_conn)
-    app.state.kontext = erstellen(init_conn)
+    init_conn.close()
+    app.state.db_path = db_path
 
     def hole_kontext() -> Anwendungskontext:
         conn = get_connection(db_path)
